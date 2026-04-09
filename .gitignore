@@ -1,0 +1,86 @@
+# Claude Code
+.claude/
+.claussian
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Generated outputs
+output/
+figures/
+logs/
+results/
+*.log
+
+# Model checkpoints & predictions (large files)
+*.pth
+*.pt
+*.pkl
+*.npz
+models/
+predictions/
+
+# Feature cache
+features_cache/
+*_cache/
+
+# Data (if full dataset not included)
+# Uncomment if needed:
+# FORinstance_dataset/
+# *.las
+# *.laz
+
+# Conda
+environment.yml.bak
+*.yml~
+
+# OS
+.Thumbs.db
+.AppleDouble
+.LSOverride
+*.lnk
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# mypy
+.mypy_cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# System
+Thumbs.db
+.DS_Store

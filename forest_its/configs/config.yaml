@@ -1,0 +1,68 @@
+paths:
+  dataset_root: "C:/Users/cantu/Downloads/FORinstance_dataset"
+  output_dir: "output"
+
+data:
+  random_state: 42
+  val_split: 0.2
+
+preprocessing:
+  dtm_resolution: 0.5        # metros, resolución de la grilla del DTM
+  hag_min: 0.0               # clamp mínimo de HAG
+  hag_max: 50.0              # clamp máximo de HAG
+  smooth_window: 5           # kernel de suavizado del DTM
+  min_hag_tree_filter: 0.5   # HAG mínimo para considerar punto como árbol tras RF
+
+features:
+  k_small: 20                # vecinos escala fina
+  k_large: 50                # vecinos escala gruesa
+  density_radius: 0.5        # radio para feature de densidad local (metros)
+  batch_size: 10000           # puntos por batch en compute_features_batch
+  max_neighbor_distance: 5.0  # radio máximo de búsqueda KNN (metros)
+  cache_dir: "features_cache" # subcarpeta dentro de output_dir
+
+rf:
+  n_estimators: 200
+  max_depth: null
+  class_weight: "balanced"
+  n_jobs: -1
+  random_state: 42
+  max_points_per_class: 500000  # submuestreo para entrenamiento
+
+pointnet2:
+  # Arquitectura
+  num_classes: 2
+  num_points: 8192          # puntos por muestra en train/inference
+
+  # Entrenamiento
+  batch_size: 4             # limitado por RTX 4050 6GB VRAM
+  lr: 0.001
+  weight_decay: 0.0001
+  step_size: 20             # StepLR decay cada N epochs
+  gamma: 0.7                # factor de decay
+  epochs: 100
+  grad_clip: 1.0
+  mixed_precision: true     # torch.cuda.amp para RTX 4050
+
+  # Augmentation
+  jitter_std: 0.02          # std del jitter gaussiano en XYZ
+  scale_min: 0.9
+  scale_max: 1.1
+
+  # Inference
+  block_size: 10.0          # metros, tamaño de bloque sliding window
+  block_overlap: 2.0        # metros, solapamiento entre bloques
+
+  # Paths
+  model_save_path: "models/pn2_best_model.pth"
+  model_checkpoint_path: "models/pn2_checkpoint.pth"
+
+watershed:
+  voxel_size: 0.1            # metros
+  min_tree_height: 2.0       # metros, altura mínima para considerar árbol
+  min_points_per_tree: 50    # puntos mínimos por segmento
+  gaussian_sigma: 0.5        # suavizado gaussiano, Yang et al. (2020) IEEE JSTARS
+  min_crown_radius_m: 1.0    # radio mínimo entre copas para peak_local_max
+
+evaluation:
+  iou_threshold: 0.5         # umbral para definir TP en métricas de instancia
