@@ -51,6 +51,7 @@ from forest_its.data.dataset import load_las, get_binary_labels, load_splits
 from forest_its.data.splits import get_train_val_split
 from forest_its.preprocessing.normalize_height import compute_hag
 from forest_its.segmentation.watershed3d import watershed3d
+from forest_its.segmentation.watershed3d_density import watershed3d_density
 from forest_its.evaluation.instance_metrics import compute_instance_metrics_plot
 
 
@@ -59,6 +60,14 @@ GRID = {
     "voxel_size": [0.1, 0.2, 0.3],
     "gaussian_sigma": [0.3, 0.5, 1.0],
     "min_crown_radius_m": [0.5, 1.0, 1.5, 2.0],
+}
+
+# Grid extendido para rf_density (incluye top_band_m)
+GRID_DENSITY = {
+    "voxel_size": [0.1, 0.2, 0.3],
+    "gaussian_sigma": [0.3, 0.5, 1.0],
+    "min_crown_radius_m": [0.5, 1.0, 1.5, 2.0],
+    "top_band_m": [2.0, 3.0, 5.0],
 }
 
 
@@ -98,8 +107,10 @@ def _prepare_plot(method: str, las_path: Path, cfg, output_dir: Path) -> dict:
         ws_mask = valid_mask.copy()
     else:
         # Cargar prediccion semantica pre-calculada
+        # *_density reutiliza las predicciones del método base
+        pred_method = {"rf_density": "rf", "pointnet2_density": "pointnet2"}.get(method, method)
         plot_name = f"{las_path.parent.name}__{las_path.stem}"
-        pred_file = output_dir / "predictions" / method / f"{plot_name}_instances.npz"
+        pred_file = output_dir / "predictions" / pred_method / f"{plot_name}_instances.npz"
         if not pred_file.exists():
             raise FileNotFoundError(
                 f"Prediccion semantica no encontrada para {plot_name} ({method}).\n"
@@ -141,6 +152,8 @@ def _evaluate_params(
     min_tree_height: float,
     min_points_per_tree: int,
     iou_threshold: float,
+    use_density: bool = False,
+    top_band_m: float = 3.0,
 ) -> float:
     """
     Corre watershed con los parametros dados y retorna F1 de instancia
@@ -150,14 +163,25 @@ def _evaluate_params(
     if len(points_for_ws) == 0:
         return 0.0
 
-    inst_ids_ws = watershed3d(
-        points_for_ws,
-        voxel_size=voxel_size,
-        gaussian_sigma=gaussian_sigma,
-        min_crown_radius_m=min_crown_radius_m,
-        min_tree_height=min_tree_height,
-        min_points_per_tree=min_points_per_tree,
-    )
+    if use_density:
+        inst_ids_ws = watershed3d_density(
+            points_for_ws,
+            voxel_size=voxel_size,
+            gaussian_sigma=gaussian_sigma,
+            min_crown_radius_m=min_crown_radius_m,
+            min_tree_height=min_tree_height,
+            min_points_per_tree=min_points_per_tree,
+            top_band_m=top_band_m,
+        )
+    else:
+        inst_ids_ws = watershed3d(
+            points_for_ws,
+            voxel_size=voxel_size,
+            gaussian_sigma=gaussian_sigma,
+            min_crown_radius_m=min_crown_radius_m,
+            min_tree_height=min_tree_height,
+            min_points_per_tree=min_points_per_tree,
+        )
 
     # Mapear a la nube completa
     instance_ids = np.zeros(plot_info["n_total"], dtype=np.int32)
@@ -177,6 +201,8 @@ def run_grid_search(method: str, cfg, output_dir: Path, dataset_root: Path) -> d
     Grid search sobre watershed params para un flujo. Retorna los mejores
     parametros (los que maximizan el F1 medio de instancia sobre val plots).
     """
+    use_density = method in ("rf_density", "pointnet2_density")
+
     # Val set = fraccion fija del split dev (igual que en los pipelines)
     dev_paths, _ = load_splits(dataset_root)
     _, val_paths = get_train_val_split(
@@ -204,11 +230,24 @@ def run_grid_search(method: str, cfg, output_dir: Path, dataset_root: Path) -> d
         print(f"  [ERROR] No hay plots val disponibles para {method}.")
         return None
 
-    param_combos = list(itertools.product(
-        GRID["voxel_size"],
-        GRID["gaussian_sigma"],
-        GRID["min_crown_radius_m"],
-    ))
+    if use_density:
+        grid = GRID_DENSITY
+        param_combos = list(itertools.product(
+            grid["voxel_size"],
+            grid["gaussian_sigma"],
+            grid["min_crown_radius_m"],
+            grid["top_band_m"],
+        ))
+        param_keys = ["voxel_size", "gaussian_sigma", "min_crown_radius_m", "top_band_m"]
+    else:
+        grid = GRID
+        param_combos = list(itertools.product(
+            grid["voxel_size"],
+            grid["gaussian_sigma"],
+            grid["min_crown_radius_m"],
+        ))
+        param_keys = ["voxel_size", "gaussian_sigma", "min_crown_radius_m"]
+
     n_runs = len(param_combos) * len(plot_data)
     print(f"Evaluando {len(param_combos)} combinaciones "
           f"x {len(plot_data)} plots = {n_runs} runs (paralelo)")
@@ -216,20 +255,23 @@ def run_grid_search(method: str, cfg, output_dir: Path, dataset_root: Path) -> d
     # Aplanar (combo, plot) — paralelizar con joblib/loky.
     # Cada tarea es un watershed3d + métricas: CPU-bound puro y GIL-libre.
     tasks = [
-        (combo_idx, plot_idx, vsz, sigma, rcrown, info)
-        for combo_idx, (vsz, sigma, rcrown) in enumerate(param_combos)
+        (combo_idx, plot_idx, combo, info)
+        for combo_idx, combo in enumerate(param_combos)
         for plot_idx, info in enumerate(plot_data)
     ]
 
-    def _task(combo_idx, plot_idx, vsz, sigma, rcrown, info):
+    def _task(combo_idx, plot_idx, combo, info):
+        params = dict(zip(param_keys, combo))
         f1 = _evaluate_params(
             info,
-            voxel_size=vsz,
-            gaussian_sigma=sigma,
-            min_crown_radius_m=rcrown,
+            voxel_size=params["voxel_size"],
+            gaussian_sigma=params["gaussian_sigma"],
+            min_crown_radius_m=params["min_crown_radius_m"],
             min_tree_height=cfg.watershed.min_tree_height,
             min_points_per_tree=cfg.watershed.min_points_per_tree,
             iou_threshold=cfg.evaluation.iou_threshold,
+            use_density=use_density,
+            top_band_m=params.get("top_band_m", 3.0),
         )
         return combo_idx, plot_idx, f1
 
@@ -245,24 +287,19 @@ def run_grid_search(method: str, cfg, output_dir: Path, dataset_root: Path) -> d
     results = []
     best_f1 = -1.0
     best_params = None
-    for combo_idx, (vsz, sigma, rcrown) in enumerate(param_combos):
+    for combo_idx, combo in enumerate(param_combos):
+        params = dict(zip(param_keys, combo))
         mean_f1 = float(np.mean(f1_matrix[combo_idx]))
         std_f1 = float(np.std(f1_matrix[combo_idx]))
         results.append({
-            "voxel_size": vsz,
-            "gaussian_sigma": sigma,
-            "min_crown_radius_m": rcrown,
+            **params,
             "mean_f1": mean_f1,
             "std_f1": std_f1,
             "n_plots": len(plot_data),
         })
         if mean_f1 > best_f1:
             best_f1 = mean_f1
-            best_params = {
-                "voxel_size": vsz,
-                "gaussian_sigma": sigma,
-                "min_crown_radius_m": rcrown,
-            }
+            best_params = params.copy()
 
     # Guardar tabla completa
     df = pd.DataFrame(results).sort_values("mean_f1", ascending=False)
@@ -285,7 +322,7 @@ def main():
     )
     parser.add_argument(
         "--methods", nargs="+", default=["baseline", "rf", "pointnet2"],
-        choices=["baseline", "rf", "pointnet2"],
+        choices=["baseline", "rf", "pointnet2", "rf_density", "pointnet2_density"],
         help="Flujos a calibrar",
     )
     parser.add_argument(

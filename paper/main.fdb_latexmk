@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1775981707.76862 "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" "main.pdf" "main" 1775981708.14214 0
-  "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" 1775981707.60433 63612 036a0d6ed10fa1391e4126986d3bb734 ""
+["pdflatex"] 1776026425.38264 "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" "main.pdf" "main" 1776026425.76175 0
+  "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" 1776026424.66639 64218 2debd82b6c3f320c7876620e9e5490c5 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -93,8 +93,8 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1770333101 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "main.aux" 1775981708.06269 12867 6d1afb014577f8ac7547119747ae1cad "pdflatex"
-  "main.tex" 1775981707.60433 63612 036a0d6ed10fa1391e4126986d3bb734 ""
+  "main.aux" 1776026425.68397 12868 6e90031e5da3f4b5fdce52144b13540c "pdflatex"
+  "main.tex" 1776026424.66639 64218 2debd82b6c3f320c7876620e9e5490c5 ""
   (generated)
   "main.aux"
   "main.log"

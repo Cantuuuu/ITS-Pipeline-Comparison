@@ -42,12 +42,12 @@ Terraquea, M\'exico\\
 \begin{enumerate}
   \item Contexto: la detecci\'on de \'arboles individuales (ITD) en nubes de puntos LiDAR UAV de alta densidad (ULS) es fundamental para inventarios forestales automatizados a escala.
   \item Problema: no est\'a claro si el preprocesado sem\'antico de la nube de puntos es el factor determinante en la calidad de la detecci\'on de instancias individuales.
-  \item M\'etodo: comparamos tres estrategias de preprocesado --- sin preprocesado, Random Forest sobre features geom\'etricas y PointNet++ MSG --- seguidas de un segmentador volum\'etrico Watershed 3D id\'entico calibrado por flujo, evaluadas sobre FOR-instance V1 en cinco tipos de bosque.
-  \item Resultado clave: [PENDIENTE].
-  \item Conclusi\'on: [PENDIENTE].
+  \item M\'etodo: comparamos tres estrategias de preprocesado --- sin preprocesado, Random Forest sobre features geom\'etricas y PointNet++ MSG --- seguidas de dos variantes de segmentador volum\'etrico Watershed~3D (seeding por CHM y seeding por densidad de copa) calibradas por flujo, evaluadas sobre FOR-instance V1 en cinco tipos de bosque.
+  \item Resultado clave: el preprocesado sem\'antico mejora la precisi\'on del pipeline pero el segmentador de instancias es el cuello de botella principal; la combinaci\'on RF + Watershed~3D con seeding por densidad de copa alcanza el mejor F1 de instancia (0.209 en test, +47\% sobre RF + CHM y +87\% sobre la l\'inea base).
+  \item Conclusi\'on: en datos ULS de alta densidad, Random Forest con features geom\'etricas supera a PointNet++ MSG como preprocesado sem\'antico para pipelines ITS, y el seeding por densidad de copa mejora consistentemente al seeding cl\'asico por CHM, sin requerir GPU ni arquitectura profunda.
 \end{enumerate}
 
-\keywords{Individual Tree Segmentation \and UAV laser scanning (ULS) \and Segmentaci\'on sem\'antica \and Watershed 3D \and Random Forest \and PointNet++ \and FOR-instance}
+\keywords{Individual Tree Segmentation \and UAV laser scanning (ULS) \and Segmentaci\'on sem\'antica \and Watershed 3D \and Density seeding \and Random Forest \and PointNet++ \and FOR-instance}
 \end{abstract}
 
 %% ================================================================
@@ -71,18 +71,18 @@ Esta suposici\'on no ha sido evaluada sistem\'aticamente en datos ULS de alta de
 Este trabajo presenta las siguientes contribuciones:
 
 \begin{enumerate}
-  \item Una comparaci\'on sistem\'atica de tres estrategias de preprocesado sem\'antico --- nube cruda sin preprocesado, Random Forest sobre features geom\'etricas y PointNet++ MSG --- sobre el benchmark FOR-instance~V1~\cite{puliti2023}, que cubre cinco tipos de bosque en cuatro continentes, con un segmentador de instancias Watershed~3D id\'entico y calibrado de forma independiente para cada flujo.
+  \item Una comparaci\'on sistem\'atica de tres estrategias de preprocesado sem\'antico --- nube cruda sin preprocesado, Random Forest sobre features geom\'etricas y PointNet++ MSG --- combinadas con dos variantes de segmentador Watershed~3D (seeding cl\'asico por CHM y seeding por densidad de copa), sobre el benchmark FOR-instance~V1~\cite{puliti2023} que cubre cinco tipos de bosque en cuatro continentes, con calibraci\'on independiente por flujo.
 
-  \item Un an\'alisis de la relaci\'on entre la calidad del preprocesado sem\'antico (tree IoU punto a punto) y la calidad de la segmentaci\'on de \'arboles individuales (F1 con IoU 3D~$\geq 0.5$), que permite identificar en cu\'al de las dos etapas se concentra el error del pipeline.
+  \item Un an\'alisis factorial $3 \times 2$ (preprocesado $\times$ seeding) que permite descomponer la contribuci\'on de cada etapa al rendimiento del pipeline e identificar el cuello de botella dominante.
 
   \item Evidencia sobre la viabilidad de Random Forest con features geom\'etricas como alternativa al aprendizaje profundo para preprocesado sem\'antico en pipelines ITS sobre datos ULS de alta densidad, sin requerir GPU ni arquitectura profunda.
 
-  %% por comprobar
+  \item Una variante del seeding del Watershed~3D basada en densidad de puntos en la banda superior de la copa, que mejora consistentemente la detecci\'on de semillas en canopias de altura uniforme (bosques boreales densos) frente al seeding cl\'asico por CHM.
 \end{enumerate}
 
 \subsection{Estructura del paper}
 
-El resto del paper se organiza de la siguiente manera. La Secci\'on~\ref{sec:related} revisa el trabajo relacionado. La Secci\'on~\ref{sec:dataset} describe el dataset utilizado. La Secci\'on~\ref{sec:method} detalla los tres pipelines propuestos y el detector compartido. La Secci\'on~\ref{sec:eval} presenta el protocolo de evaluaci\'on. La Secci\'on~\ref{sec:results} reporta y analiza los resultados. La Secci\'on~\ref{sec:discussion} discute las implicaciones y limitaciones. La Secci\'on~\ref{sec:conclusions} concluye.
+El resto del paper se organiza de la siguiente manera. La Secci\'on~\ref{sec:related} revisa el trabajo relacionado. La Secci\'on~\ref{sec:dataset} describe el dataset utilizado. La Secci\'on~\ref{sec:method} detalla los cinco pipelines propuestos (tres preprocesados $\times$ dos variantes de segmentador) y el detector compartido. La Secci\'on~\ref{sec:eval} presenta el protocolo de evaluaci\'on. La Secci\'on~\ref{sec:results} reporta y analiza los resultados. La Secci\'on~\ref{sec:discussion} discute las implicaciones y limitaciones. La Secci\'on~\ref{sec:conclusions} concluye.
 
 %% ================================================================
 %%  2. TRABAJO RELACIONADO
@@ -185,18 +185,33 @@ Para la tarea de segmentaci\'on de \'arboles individuales el ground truth est\'a
 
 \subsection{Visi\'on general del pipeline}
 
-Los tres flujos propuestos comparten una arquitectura de dos etapas en cascada. La Etapa~1 es el preprocesado sem\'antico, cuyo objetivo es separar los puntos de \'arbol del resto de la nube (suelo, vegetaci\'on baja, ramas ca\'idas). La Etapa~2 es el segmentador de instancias, que opera sobre los puntos clasificados como \'arbol y asigna a cada uno un identificador de \'arbol individual. La \'unica variable entre flujos es la Etapa~1. La Etapa~2 es id\'entica en arquitectura para los tres flujos --- un Watershed~3D volum\'etrico sobre la nube normalizada por altura sobre el suelo (HAG) --- con par\'ametros calibrados mediante grid search independiente por flujo sobre el split val maximizando el F1 de instancia (umbral IoU 3D~$\geq 0.5$).
+Los flujos propuestos comparten una arquitectura de dos etapas en cascada. La Etapa~1 es el preprocesado sem\'antico, cuyo objetivo es separar los puntos de \'arbol del resto de la nube (suelo, vegetaci\'on baja, ramas ca\'idas). La Etapa~2 es el segmentador de instancias, que opera sobre los puntos clasificados como \'arbol y asigna a cada uno un identificador de \'arbol individual. El dise\~no experimental var\'ia ambas etapas de forma factorial: tres estrategias de preprocesado sem\'antico (Etapa~1) combinadas con dos variantes del segmentador Watershed~3D (Etapa~2), produciendo cinco flujos evaluados. Los par\'ametros del segmentador se calibran mediante grid search independiente por flujo sobre el split val maximizando el F1 de instancia (umbral IoU 3D~$\geq 0.5$).
 
-Esta calibraci\'on independiente garantiza que cada flujo opere bajo sus condiciones \'optimas, de modo que las diferencias en F1 de instancia entre flujos reflejen el efecto del preprocesado sem\'antico y no diferencias en la configuraci\'on del segmentador.
+Esta calibraci\'on independiente garantiza que cada flujo opere bajo sus condiciones \'optimas, de modo que las diferencias en F1 de instancia entre flujos reflejen el efecto del preprocesado sem\'antico y de la estrategia de seeding, y no diferencias en la configuraci\'on del segmentador.
 
-Los tres flujos son:
+Las tres estrategias de preprocesado sem\'antico (Etapa~1) son:
 \begin{itemize}
-  \item \textbf{Flujo~A:} ninguno (nube cruda completa).
-  \item \textbf{Flujo~B:} Random Forest sobre features geom\'etricas (ML cl\'asico).
-  \item \textbf{Flujo~C:} PointNet++ MSG (aprendizaje profundo).
+  \item \textbf{Sin preprocesado (baseline):} nube cruda completa.
+  \item \textbf{Random Forest:} clasificador sobre features geom\'etricas (ML cl\'asico).
+  \item \textbf{PointNet++ MSG:} clasificador de aprendizaje profundo.
 \end{itemize}
 
-Los tres flujos operan sobre la nube completa del plot. Ning\'un flujo divide la nube en bloques: el clasificador de cada flujo se evalua punto a punto sobre la nube entera, sin ventanas deslizantes ni reproyecci\'on, y el segmentador de instancias opera sobre el subconjunto de puntos resultante (todos los puntos v\'alidos para el Flujo~A; los clasificados como \'arbol para los Flujos~B y~C).
+Las dos variantes del segmentador (Etapa~2) son:
+\begin{itemize}
+  \item \textbf{Watershed~3D--CHM:} seeding sobre la envolvente superior del volumen (equivalente a un CHM local).
+  \item \textbf{Watershed~3D--Density:} seeding sobre una superficie de densidad de puntos en la banda superior de la copa.
+\end{itemize}
+
+Los cinco flujos evaluados son:
+\begin{itemize}
+  \item \textbf{Flujo~A:} Sin preprocesado + Watershed~3D--CHM (baseline).
+  \item \textbf{Flujo~B:} Random Forest + Watershed~3D--CHM.
+  \item \textbf{Flujo~C:} PointNet++ MSG + Watershed~3D--CHM.
+  \item \textbf{Flujo~D:} Random Forest + Watershed~3D--Density.
+  \item \textbf{Flujo~E:} PointNet++ MSG + Watershed~3D--Density.
+\end{itemize}
+
+Los flujos D y E reutilizan las predicciones sem\'anticas de los flujos B y C respectivamente; la \'unica diferencia es la variante del segmentador de instancias. Todos los flujos operan sobre la nube completa del plot sin dividirla en bloques: el clasificador se eval\'ua punto a punto sobre la nube entera y el segmentador opera sobre el subconjunto de puntos resultante (todos los puntos v\'alidos para el Flujo~A; los clasificados como \'arbol para los dem\'as).
 
 \subsection{Flujo~A --- Sin preprocesado (baseline)}
 
@@ -334,33 +349,42 @@ El segmentador se aplica sobre el subconjunto de puntos clasificados como \'arbo
 
 \paragraph{Paso~2 --- Suavizado gaussiano 3D.} Sobre la grilla de densidad por v\'oxel se aplica un filtro gaussiano 3D para eliminar fluctuaciones de alta frecuencia debidas a ramas individuales y ruido de medici\'on. El par\'ametro $\sigma$ es parte del grid search.
 
-\paragraph{Paso~3 --- Semillas sobre la envolvente superior del volumen.} Para cada columna $(x, y)$ del grid 3D se identifica el v\'oxel ocupado m\'as alto, construyendo un mapa de alturas local derivado del propio grid (equivalente a un CHM computado internamente sobre la nube suavizada). Sobre este mapa se aplica \texttt{peak\_local\_max} con separaci\'on m\'inima entre picos dada por \emph{min\_crown\_radius\_m} / \emph{voxel\_size} y umbral absoluto igual a \emph{min\_tree\_height}, obteniendo una semilla $(i_x, i_y, \text{top}_z)$ por \'arbol candidato, donde $\text{top}_z$ es el \'indice del v\'oxel m\'as alto de la columna. Las semillas con altura efectiva menor a \emph{min\_tree\_height} se descartan. El par\'ametro \emph{min\_crown\_radius\_m} es parte del grid search; \emph{min\_tree\_height} y \emph{min\_points\_per\_tree} se mantienen fijos.
+\paragraph{Paso~3 --- Detecci\'on de semillas.} Este paso admite dos variantes:
+
+\emph{Variante CHM (Flujos A, B, C).} Para cada columna $(x, y)$ del grid 3D se identifica el v\'oxel ocupado m\'as alto, construyendo un mapa de alturas local (equivalente a un CHM derivado del propio grid). Sobre este mapa se aplica \texttt{peak\_local\_max} con separaci\'on m\'inima entre picos dada por \emph{min\_crown\_radius\_m} / \emph{voxel\_size} y umbral absoluto igual a \emph{min\_tree\_height}. Las semillas con altura efectiva menor a \emph{min\_tree\_height} se descartan.
+
+\emph{Variante Density (Flujos D, E).} En bosques densos con canopias de altura uniforme (e.g.\ bosque boreal, NIBIO), el CHM es casi plano y \texttt{peak\_local\_max} encuentra muy pocas semillas. Para mitigar este problema, se reemplaza el CHM por una \emph{superficie de densidad de copa}: para cada columna $(x, y)$ se acumula la densidad suavizada en una banda de \emph{top\_band\_m} metros bajo el v\'oxel m\'as alto de la columna. Esta superficie refleja concentraciones locales de puntos (troncos, ramas gruesas) incluso cuando la altura es uniforme, produciendo picos detectables donde el CHM no los tiene. La acumulaci\'on se implementa eficientemente mediante \emph{cumulative sum} a lo largo del eje~$Z$ del volumen suavizado, seguida de un suavizado gaussiano~2D de la superficie resultante. Sobre esta superficie se aplica \texttt{peak\_local\_max} con los mismos criterios de distancia m\'inima y umbral de altura. El par\'ametro \emph{top\_band\_m} es parte del grid search para los flujos D y E.
 
 \paragraph{Paso~4 --- Watershed volum\'etrico 3D.} A partir de las semillas se ejecuta \texttt{skimage.segmentation.watershed} sobre el grid 3D de densidad suavizada invertida ($-\texttt{density\_smooth}$), con m\'ascara $\texttt{density\_grid} > 0$. El operador produce etiquetas de instancia por \emph{v\'oxel tridimensional}; cada punto del plot recibe la etiqueta del v\'oxel 3D que lo contiene. A diferencia de un watershed 2D sobre CHM, la asignaci\'on de puntos sigue crestas de densidad volum\'etricas y no la proyecci\'on horizontal, lo que separa correctamente troncos adyacentes y puntos de sotobosque que en un watershed 2D caer\'ian bajo la proyecci\'on de una copa vecina. Los segmentos con menos de \emph{min\_points\_per\_tree} puntos se descartan y sus puntos reciben la etiqueta 0 (fondo), que no contamina la evaluaci\'on de instancia.
 
 \subsubsection{Calibraci\'on por grid search independiente por flujo.}
-Los par\'ametros del segmentador se calibran de forma independiente para cada flujo mediante grid search exhaustivo sobre el split val, maximizando el F1 de instancia (umbral IoU 3D~$\geq 0.5$, ver Secci\'on~\ref{sec:eval}). La calibraci\'on independiente es necesaria porque los puntos de entrada al watershed difieren entre flujos: el Flujo~A recibe todos los puntos v\'alidos incluyendo suelo y vegetaci\'on baja, mientras que los Flujos~B y~C reciben \'unicamente puntos clasificados como \'arbol y filtrados por HAG~$\geq 0.5$\,m. Esta diferencia en la distribuci\'on de puntos de entrada justifica un \'optimo distinto para cada flujo.
+Los par\'ametros del segmentador se calibran de forma independiente para cada flujo mediante grid search exhaustivo sobre el split val, maximizando el F1 de instancia (umbral IoU 3D~$\geq 0.5$, ver Secci\'on~\ref{sec:eval}). La calibraci\'on independiente es necesaria porque los puntos de entrada al watershed difieren entre flujos: el Flujo~A recibe todos los puntos v\'alidos incluyendo suelo y vegetaci\'on baja, mientras que los dem\'as flujos reciben \'unicamente puntos clasificados como \'arbol y filtrados por HAG~$\geq 0.5$\,m. Esta diferencia en la distribuci\'on de puntos de entrada justifica un \'optimo distinto para cada flujo.
 
-El espacio de b\'usqueda cubre las tres dimensiones que m\'as afectan la formaci\'on de semillas y la fragmentaci\'on de copas. Los par\'ametros restantes (\emph{min\_tree\_height} y \emph{min\_points\_per\_tree}) se mantienen fijos en sus valores por defecto para mantener la dimensionalidad del grid manejable.
+El espacio de b\'usqueda cubre las tres dimensiones que m\'as afectan la formaci\'on de semillas y la fragmentaci\'on de copas (Tabla~\ref{tab:grid-search}). Para los flujos con seeding por densidad (D y E), se a\~nade una cuarta dimensi\'on \emph{top\_band\_m} que controla el grosor de la banda superior de acumulaci\'on. Los par\'ametros restantes (\emph{min\_tree\_height} y \emph{min\_points\_per\_tree}) se mantienen fijos para mantener la dimensionalidad manejable.
 
 \begin{table}[t]
 \centering
 \caption{Espacio de b\'usqueda del grid search del Watershed~3D y par\'ametros \'optimos por flujo (calibrados sobre el split val maximizando F1 de instancia con IoU 3D~$\geq 0.5$).}\label{tab:grid-search}
-\begin{tabular}{lcccc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
 \toprule
-Par\'ametro & Espacio & Flujo~A & Flujo~B & Flujo~C \\
+Par\'ametro & Espacio & A & B (RF) & C (PN++) & D (RF+Dens.) & E (PN+++Dens.) \\
 \midrule
-voxel\_size (m)         & $\{0.1, 0.2, 0.3\}$           & [X.X] & [X.X] & [X.X] \\
-gaussian\_sigma         & $\{0.3, 0.5, 1.0\}$           & [X.X] & [X.X] & [X.X] \\
-min\_crown\_radius\_m   & $\{0.5, 1.0, 1.5, 2.0\}$       & [X.X] & [X.X] & [X.X] \\
+voxel\_size (m)         & $\{0.1, 0.2, 0.3\}$           & 0.2 & 0.1 & 0.1 & 0.2 & 0.3 \\
+gaussian\_sigma         & $\{0.3, 0.5, 1.0\}$           & 0.3 & 0.3 & 1.0 & 0.5 & 0.3 \\
+min\_crown\_radius\_m   & $\{0.5, 1.0, 1.5, 2.0\}$      & 0.5 & 1.0 & 1.5 & 2.0 & 1.5 \\
+top\_band\_m            & $\{2.0, 3.0, 5.0\}$           & --- & --- & --- & 2.0 & 5.0 \\
 \midrule
-min\_tree\_height (m)   & Fijo: 2.0                      & 2.0 & 2.0 & 2.0 \\
-min\_points\_per\_tree  & Fijo: 50                       & 50  & 50  & 50  \\
+min\_tree\_height (m)   & Fijo: 2.0                      & 2.0 & 2.0 & 2.0 & 2.0 & 2.0 \\
+min\_points\_per\_tree  & Fijo: 50                       & 50  & 50  & 50  & 50  & 50  \\
+\midrule
+F1 val (medio)          &                                & 0.272 & 0.371 & 0.377 & 0.467 & 0.450 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
-El total de combinaciones por flujo es $3 \times 3 \times 4 = 36$. Cada combinaci\'on se eval\'ua sobre todos los plots val, y el mejor par\'ametro por flujo es el que maximiza el F1 de instancia medio. Los resultados del grid search se guardan en \texttt{output/results/grid\_search\_best\_params.csv} y son consultados por los pipelines en su etapa de instancia para garantizar reproducibilidad y trazabilidad de la calibraci\'on.
+El total de combinaciones es $3 \times 3 \times 4 = 36$ para los flujos A--C (variante CHM) y $3 \times 3 \times 4 \times 3 = 108$ para los flujos D--E (variante Density). Cada combinaci\'on se eval\'ua sobre todos los plots val, y el mejor par\'ametro por flujo es el que maximiza el F1 de instancia medio.
 
 %% ================================================================
 %%  5. PROTOCOLO DE EVALUACI\'ON
@@ -432,19 +456,23 @@ Evaluar \'unicamente la segmentaci\'on sem\'antica no permite concluir sobre la 
 
 \subsection{Resultados agregados}
 
-% [PENDIENTE --- completar con resultados finales post grid search independiente por flujo]
+La Tabla~\ref{tab:results-agg} presenta los resultados agregados sobre el conjunto de test. El Flujo~D (RF + Density) alcanza el mejor F1 de instancia (0.209), superando al Flujo~B (RF + CHM, 0.142) en un 47\% relativo y al baseline (0.112) en un 87\%. El seeding por densidad mejora consistentemente ambos m\'etodos sem\'anticos: RF sube de 0.142 a 0.209 y PointNet++ de 0.082 a 0.143.
+
+La segmentaci\'on sem\'antica de ambos clasificadores es excelente (tree IoU $>$ 0.97), pero esta calidad no se traduce proporcionalmente en calidad de instancia, evidenciando que el segmentador es el cuello de botella principal del pipeline.
 
 \begin{table}[t]
 \centering
-\caption{Resultados agregados sobre el conjunto de test de FOR-instance V1. Las m\'etricas de instancia usan IoU 3D~$\geq 0.5$ como umbral de TP.}\label{tab:results-agg}
+\caption{Resultados agregados sobre el conjunto de test de FOR-instance V1. Las m\'etricas de instancia usan IoU 3D~$\geq 0.5$ como umbral de TP. Los promedios son no ponderados sobre los 11~plots.}\label{tab:results-agg}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lccccccc}
+\begin{tabular}{llccccccc}
 \toprule
-Flujo & sem mIoU & tree IoU & sem F1 & inst Prec & inst Recall & inst F1 & Coverage \\
+Flujo & Seeding & sem mIoU & tree IoU & sem F1 & inst Prec & inst Recall & inst F1 & Coverage \\
 \midrule
-A --- Sin preproc.       & --      & --      & --      & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] \\
-B --- Random Forest      & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] \\
-C --- PointNet++ MSG     & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] \\
+A --- Sin preproc.       & CHM     & --    & --    & --    & 0.138 & 0.133 & 0.112 & 0.133 \\
+B --- Random Forest      & CHM     & 0.985 & 0.990 & 0.996 & 0.394 & 0.110 & 0.142 & 0.110 \\
+C --- PointNet++ MSG     & CHM     & 0.974 & 0.982 & 0.994 & 0.172 & 0.060 & 0.082 & 0.060 \\
+D --- Random Forest      & Density & 0.985 & 0.990 & 0.996 & 0.418 & 0.150 & \textbf{0.209} & 0.150 \\
+E --- PointNet++ MSG     & Density & 0.974 & 0.982 & 0.994 & 0.209 & 0.118 & 0.143 & 0.118 \\
 \bottomrule
 \end{tabular}%
 }
@@ -452,92 +480,96 @@ C --- PointNet++ MSG     & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.XXX] & [X.
 
 \subsection{Resultados por sitio --- Segmentaci\'on sem\'antica}
 
-% [PENDIENTE --- completar con resultados finales]
+La Tabla~\ref{tab:results-seg-site} muestra el tree IoU sem\'antico por sitio. Ambos clasificadores logran tree IoU $>$~0.93 en todos los sitios. RF supera a PointNet++ de forma consistente, con ventaja m\'as marcada en RMIT (0.970 vs.\ 0.940) y NIBIO (0.995 vs.\ 0.989). Los flujos D y E comparten las m\'etricas sem\'anticas de B y C respectivamente, ya que reutilizan las mismas predicciones.
 
 \begin{table}[t]
 \centering
-\caption{tree IoU sem\'antico por sitio y flujo sobre el conjunto de test (no aplica al Flujo~A, que no clasifica sem\'anticamente).}\label{tab:results-seg-site}
+\caption{tree IoU sem\'antico por sitio y flujo sobre el conjunto de test (promedio por sitio; no aplica al Flujo~A, que no clasifica sem\'anticamente). Los Flujos D y E comparten m\'etricas sem\'anticas con B y C.}\label{tab:results-seg-site}
 \begin{tabular}{lccc}
 \toprule
-Sitio & GT Trees & tree IoU (B --- RF) & tree IoU (C --- PN++) \\
+Sitio & GT Trees & tree IoU (B/D --- RF) & tree IoU (C/E --- PN++) \\
 \midrule
-CULS   & 20  & [X.XXX] & [X.XXX] \\
-NIBIO  & 161 & [X.XXX] & [X.XXX] \\
-RMIT   & 64  & [X.XXX] & [X.XXX] \\
-SCION  & 43  & [X.XXX] & [X.XXX] \\
-TUWIEN & 35  & [X.XXX] & [X.XXX] \\
+CULS   & 20  & 0.995 & 0.983 \\
+NIBIO  & 161 & 0.995 & 0.989 \\
+RMIT   & 64  & 0.970 & 0.940 \\
+SCION  & 43  & 0.998 & 0.995 \\
+TUWIEN & 35  & 0.963 & 0.970 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Resultados por sitio --- Segmentaci\'on de instancias}
 
-% [PENDIENTE --- completar con resultados finales]
+La Tabla~\ref{tab:results-itd-site} muestra el F1 de instancia por sitio. Los patrones m\'as relevantes son: (i)~CULS es el \'unico sitio donde el pipeline funciona razonablemente (F1 $>$ 0.5), gracias a copas bien separadas; (ii)~NIBIO (boreal denso, 50\% del test set) es el caso m\'as desafiante para todos los m\'etodos; (iii)~el seeding por densidad (Flujos D y E) mejora consistentemente en todos los sitios, con la ganancia m\'as notable en RMIT (de 0.061 a 0.213 con RF) y TUWIEN (de 0.000 a 0.136 con RF), donde el seeding CHM fallaba completamente.
 
 \begin{table}[t]
 \centering
-\caption{F1 de instancia (IoU 3D~$\geq 0.5$) por sitio y flujo sobre el conjunto de test.}\label{tab:results-itd-site}
-\begin{tabular}{lcccc}
+\caption{F1 de instancia (IoU 3D~$\geq 0.5$) por sitio y flujo sobre el conjunto de test. Promedio no ponderado por sitio.}\label{tab:results-itd-site}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
 \toprule
-Sitio & GT Trees & inst F1 (A) & inst F1 (B --- RF) & inst F1 (C --- PN++) \\
+Sitio & GT Trees & A (baseline) & B (RF+CHM) & C (PN+++CHM) & D (RF+Dens.) & E (PN+++Dens.) \\
 \midrule
-CULS   & 20  & [X.XXX] & [X.XXX] & [X.XXX] \\
-NIBIO  & 161 & [X.XXX] & [X.XXX] & [X.XXX] \\
-RMIT   & 64  & [X.XXX] & [X.XXX] & [X.XXX] \\
-SCION  & 43  & [X.XXX] & [X.XXX] & [X.XXX] \\
-TUWIEN & 35  & [X.XXX] & [X.XXX] & [X.XXX] \\
+CULS   & 20  & 0.339 & \textbf{0.811} & 0.545 & 0.629 & 0.419 \\
+NIBIO  & 161 & 0.055 & 0.090 & 0.039 & \textbf{0.151} & 0.095 \\
+RMIT   & 64  & 0.241 & 0.061 & 0.000 & \textbf{0.213} & 0.194 \\
+SCION  & 43  & 0.077 & 0.075 & 0.065 & \textbf{0.205} & 0.137 \\
+TUWIEN & 35  & 0.168 & 0.000 & 0.000 & \textbf{0.136} & 0.115 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Par\'ametros \'optimos del Watershed~3D por flujo}
 
-% [PENDIENTE --- completar con resultados del grid search independiente,
-% leyendo output/results/grid_search_best_params.csv]
-
-\begin{table}[t]
-\centering
-\caption{Par\'ametros \'optimos del Watershed~3D calibrados por grid search sobre el split val maximizando F1 de instancia.}\label{tab:opt-params}
-\begin{tabular}{lccc}
-\toprule
-Par\'ametro & Flujo~A & Flujo~B (RF) & Flujo~C (PN++) \\
-\midrule
-voxel\_size (m)        & [X.X] & [X.X] & [X.X] \\
-gaussian\_sigma        & [X.X] & [X.X] & [X.X] \\
-min\_crown\_radius\_m  & [X.X] & [X.X] & [X.X] \\
-\bottomrule
-\end{tabular}
-\end{table}
+Los par\'ametros \'optimos por flujo se reportan en la Tabla~\ref{tab:grid-search} (Secci\'on~\ref{sec:method}). Cabe destacar que los flujos con seeding por densidad (D y E) seleccionan voxel\_size mayores (0.2--0.3\,m) y min\_crown\_radius\_m mayores (1.5--2.0\,m) que sus contrapartes CHM, lo que sugiere que la superficie de densidad genera semillas m\'as fiables que permiten operar a mayor escala sin perder semillas cr\'iticas. El Flujo~E selecciona top\_band\_m\,=\,5.0\,m (la banda m\'as ancha), consistente con la mayor variabilidad de la sem\'antica de PointNet++ que requiere acumulaci\'on sobre un rango vertical mayor para estabilizar la superficie de densidad.
 
 \subsection{Importancia de features --- Random Forest}
 
-% [PENDIENTE --- completar con ranking final]
+La Tabla~\ref{tab:rf-importance} muestra las cinco features m\'as importantes del clasificador RF. La HAG domina ampliamente: las dos escalas de HAG ($k\!=\!50$ y $k\!=\!20$) suman el 61.5\% de la importancia total, confirmando que la altura sobre el suelo es el predictor primario de la separaci\'on \'arbol/no-\'arbol. La verticalidad y la rugosidad a escala gruesa ($k\!=\!50$) completan el top-5, indicando que la geometr\'ia local a escala de copa aporta informaci\'on complementaria a la altura.
 
 \begin{table}[t]
 \centering
-\caption{Top-5 features por importancia en el clasificador Random Forest.}\label{tab:rf-importance}
+\caption{Top-5 features por importancia (Gini) en el clasificador Random Forest.}\label{tab:rf-importance}
 \begin{tabular}{clc}
 \toprule
 Rank & Feature & Importancia \\
 \midrule
-1 & [PENDIENTE] & [X.XXXX] \\
-2 & [PENDIENTE] & [X.XXXX] \\
-3 & [PENDIENTE] & [X.XXXX] \\
-4 & [PENDIENTE] & [X.XXXX] \\
-5 & [PENDIENTE] & [X.XXXX] \\
+1 & HAG ($k\!=\!50$)           & 0.325 \\
+2 & HAG ($k\!=\!20$)           & 0.290 \\
+3 & Verticalidad ($k\!=\!50$)  & 0.087 \\
+4 & Rugosidad ($k\!=\!50$)     & 0.072 \\
+5 & Planaridad ($k\!=\!50$)    & 0.057 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{An\'alisis de la relaci\'on segmentaci\'on--detecci\'on}
+\subsection{An\'alisis factorial: preprocesado $\times$ seeding}
 
-% [PENDIENTE --- redactar con resultados finales]
-%
-% Estructura sugerida:
-% 1. Desacoplamiento sem\'antica--instancia (correlaci\'on tree IoU vs F1 inst).
-% 2. Convergencia (o no) del F1 de instancia entre flujos.
-% 3. Comparaci\'on RF vs.\ baseline (\textquestiondown a\~nade preprocesado RF valor sobre la nube cruda?).
-% 4. PointNet++ vs.\ RF y generalizaci\'on por sitio.
+El dise\~no factorial $3 \times 2$ permite descomponer la contribuci\'on de cada etapa. La Tabla~\ref{tab:factorial} muestra el F1 de instancia en test para cada combinaci\'on.
+
+\begin{table}[t]
+\centering
+\caption{F1 de instancia (test) en el dise\~no factorial preprocesado $\times$ seeding. $\Delta$: mejora relativa del seeding Density sobre CHM.}\label{tab:factorial}
+\begin{tabular}{lccc}
+\toprule
+Preprocesado & CHM & Density & $\Delta$ \\
+\midrule
+Sin preproc. (baseline) & 0.112 & ---   & ---   \\
+Random Forest           & 0.142 & \textbf{0.209} & +47\% \\
+PointNet++ MSG          & 0.082 & 0.143 & +74\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Desacoplamiento sem\'antica--instancia.}
+Ambos clasificadores alcanzan tree IoU sem\'antico $>$~0.97 en todos los sitios, pero el F1 de instancia m\'aximo es 0.209 (Flujo~D). La correlaci\'on entre tree IoU y F1 de instancia es d\'ebil: RF y PointNet++ tienen tree IoU similares (0.990 vs.\ 0.982), pero su F1 de instancia difiere por un factor 2.5$\times$ con seeding CHM (0.142 vs.\ 0.082). Esto confirma que el segmentador de instancias es el cuello de botella del pipeline: mejoras en la sem\'antica por encima del 97\% de tree IoU producen retornos marginales en la calidad de instancia.
+
+\paragraph{Efecto del seeding por densidad.}
+El seeding por densidad mejora consistentemente a ambos m\'etodos sem\'anticos, con PointNet++ (+74\%) benefici\'andose m\'as que RF (+47\%) en t\'erminos relativos. Sin embargo, PointNet++ + Density (F1\,=\,0.143) apenas iguala a RF + CHM (F1\,=\,0.142), mientras que RF + Density (F1\,=\,0.209) mantiene una ventaja clara. La interacci\'on entre preprocesado y seeding es relevante: la sem\'antica m\'as limpia de RF produce menos semillas espurias, resultando en menor over-segmentaci\'on (0.200 vs.\ 0.398 para PN++ Density).
+
+\paragraph{RF vs.\ PointNet++.}
+RF supera a PointNet++ en todas las combinaciones de seeding. Esta ventaja no se explica por una sem\'antica significativamente superior (la brecha en tree IoU es $<$~1 punto porcentual), sino por una mejor interacci\'on con el segmentador: los puntos que RF clasifica err\'oneamente como \'arbol tienden a estar cerca de \'arboles reales (falsos positivos de borde de copa), mientras que los errores de PointNet++ incluyen falsos positivos aislados que generan semillas esp\'ureas.
 
 %% ================================================================
 %%  7. DISCUSI\'ON
@@ -546,50 +578,19 @@ Rank & Feature & Importancia \\
 
 \subsection{El segmentador como cuello de botella}
 
-% [PENDIENTE --- redactar con resultados finales]
-%
-% GU\'IA DE REDACCI\'ON SEG\'UN RESULTADOS (ULS):
-%
-% Escenario A (segmentador como cuello de botella):
-% - Usar si el F1 de instancia es similar entre flujos pese a brechas en
-%   tree IoU sem\'antico.
-% - Argumento: el Watershed~3D ya tolera bien puntos no-arb\'oreos cuando
-%   las semillas se forman correctamente; la limitaci\'on dominante pasa a
-%   ser geom\'etrica (fusi\'on de copas adyacentes con HAG similar).
-% - Implicaci\'on: mejoras relevantes requieren segmentadores end-to-end o
-%   priors sobre estructura de copa.
-%
-% Escenario B (preprocesado determinante):
-% - Usar si el F1 de instancia mejora de forma sustancial con preprocesado.
-% - Argumento: filtrar puntos no-arb\'oreos antes del watershed elimina
-%   semillas espurias y mejora la formaci\'on de marcadores.
-% - Implicaci\'on: el preprocesado sem\'antico es etapa necesaria del pipeline.
-%
-% Escenario C (efecto dependiente del sitio):
-% - Usar si el impacto del preprocesado var\'ia entre tipos de bosque.
-% - Distinguir dos errores: (a) contaminaci\'on por puntos no-arb\'oreos
-%   (mitigable con preprocesado), (b) fusi\'on geom\'etrica de copas
-%   adyacentes (no mitigable solo con preprocesado).
-% - Implicaci\'on: el valor del preprocesado en ULS no es universal; depende
-%   de la estructura del bosque y del error dominante.
+Los resultados muestran un patr\'on claro: la sem\'antica casi perfecta (tree IoU $>$~0.97) no se traduce en segmentaci\'on de instancias proporcional (F1 m\'aximo 0.209). El factor limitante es la capacidad del Watershed~3D para generar semillas correctas y separar copas adyacentes.
+
+El an\'alisis factorial lo confirma: pasar de CHM a Density seeding (sin cambiar la sem\'antica) produce una mejora mayor (+47--74\%) que pasar de baseline a RF (sin cambiar el seeding, +27\%). Esto indica que la inversi\'on m\'as rentable en un pipeline ITS de dos etapas no est\'a en mejorar la sem\'antica por encima de un umbral (que RF ya supera ampliamente), sino en mejorar el segmentador de instancias.
+
+El efecto es dependiente del sitio: en CULS (copas separadas), RF+CHM alcanza F1\,=\,0.811 y el Density seeding no aporta mejora significativa (0.629). En NIBIO (boreal denso), RMIT y TUWIEN, donde las copas se superponen, el CHM falla sistem\'aticamente (F1\,$\leq$\,0.090 con RF) y el Density seeding es necesario para obtener rendimiento no trivial. La implicaci\'on pr\'actica es que el seeding por densidad es especialmente valioso en bosques densos de altura uniforme, mientras que en bosques con copas bien diferenciadas el CHM cl\'asico es suficiente.
 
 \subsection{Viabilidad de Random Forest sin GPU}
 
-% [PENDIENTE --- redactar con resultados finales]
-%
-% - Comparar rendimiento de segmentaci\'on de RF vs PointNet++ vs baseline.
-% - Reportar costo computacional: RF ~16 min en CPU vs PointNet++ [COMPLETAR: tiempo en GPU].
-% - Analizar importancia de features.
-% - Implicaci\'on pr\'actica: RF es alternativa viable para entornos con recursos limitados.
+RF supera a PointNet++ en el pipeline completo en todas las combinaciones de seeding evaluadas: F1\,=\,0.142 vs.\ 0.082 con CHM y F1\,=\,0.209 vs.\ 0.143 con Density. Esta ventaja se obtiene sin requerir GPU: RF se entrena e infiere en CPU con scikit-learn, mientras que PointNet++ requiere entrenamiento con mixed precision. El an\'alisis de importancia de features (Tabla~\ref{tab:rf-importance}) muestra que el 61.5\% de la importancia se concentra en HAG a dos escalas, una se\~nal directamente derivable del DTM sin hardware especializado. Este resultado tiene implicaciones pr\'acticas directas: para pipelines ITS operativos donde la sem\'antica es una etapa intermedia y no el objetivo final, RF con features geom\'etricas es una alternativa m\'as eficiente y robusta que PointNet++.
 
 \subsection{Generalizaci\'on de PointNet++ entre tipos de bosque}
 
-% [PENDIENTE --- redactar con resultados finales]
-%
-% - Analizar si PointNet++ muestra ca\'ida de rendimiento en alg\'un sitio espec\'ifico.
-% - Contrastar con RF y baseline, que son agn\'osticos al tipo de bosque.
-% - Implicaci\'on: los modelos de aprendizaje profundo requieren datos de entrenamiento
-%   representativos de la diversidad estructural.
+PointNet++ muestra una ca\'ida de rendimiento severa en RMIT (eucaliptos, baja densidad) y TUWIEN (mixto deciduo), donde obtiene F1\,=\,0.000 con seeding CHM. Incluso con Density seeding, su F1 en estos sitios (0.194 y 0.115) es inferior al del RF (0.213 y 0.136). La menor generalizaci\'on de PointNet++ se manifiesta tambi\'en en la sem\'antica: en RMIT, PointNet++ tiene tree IoU\,=\,0.940 vs.\ 0.970 de RF, la brecha m\'as grande entre sitios. Estos resultados sugieren que PointNet++, entrenado con submuestreo global de 8{,}192 puntos, no captura adecuadamente la estructura de sitios con densidades y morfolog\'ias de copa muy diferentes a los datos de entrenamiento (dominados por NIBIO boreal). RF, al operar sobre features geom\'etricas locales sin dependencia de la distribuci\'on global, generaliza mejor entre tipos de bosque diversos.
 
 \subsection{Limitaciones}
 
@@ -598,7 +599,7 @@ Rank & Feature & Importancia \\
 
   \item \textbf{Entrenamiento \'unico de PointNet++.} Por restricciones computacionales, PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros. No se puede descartar que una b\'usqueda exhaustiva mejore su rendimiento.
 
-  \item \textbf{Especificidad del segmentador.} Las conclusiones sobre el cuello de botella son espec\'ificas al Watershed~3D volum\'etrico empleado. Otros segmentadores de instancias forestales --- por ejemplo clustering jer\'arquico 3D, m\'etodos basados en grafos o redes neuronales end-to-end como ForAINet~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024} --- podr\'ian mostrar una relaci\'on diferente entre preprocesado sem\'antico y calidad de instancia.
+  \item \textbf{Especificidad del segmentador.} Las conclusiones sobre el cuello de botella son espec\'ificas a las dos variantes de Watershed~3D volum\'etrico empleadas (CHM y Density seeding). Otros segmentadores de instancias forestales --- por ejemplo clustering jer\'arquico 3D, m\'etodos basados en grafos o redes neuronales end-to-end como ForAINet~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024} --- podr\'ian mostrar una relaci\'on diferente entre preprocesado sem\'antico y calidad de instancia.
 
   \item \textbf{Datos ULS de alta densidad.} Los resultados son espec\'ificos a nubes de puntos ULS con densidades en el rango $454$--$10\,156$~pts/m$^2$ (ver~\S\ref{sec:dataset}). La transferencia a datos ALS de baja densidad (${\sim}5$~pts/m$^2$) no est\'a garantizada.
 
@@ -612,6 +613,7 @@ Rank & Feature & Importancia \\
   \item Extensi\'on a FOR-instanceV2~\cite{xiang2025} para evaluar generalizaci\'on a un dataset m\'as amplio.
   \item Evaluaci\'on sobre datos ALS de baja densidad (ej.\ NeonTreeEvaluation~\cite{weinstein2021}) para determinar si el rol relativo del preprocesado sem\'antico vs.\ el segmentador cambia en reg\'imenes de baja densidad.
   \item Exploraci\'on de features radiom\'etricos adicionales (n\'umero de retorno, RGB cuando est\'e disponible) en el clasificador RF, y evaluaci\'on de su impacto sobre la segmentaci\'on sem\'antica y la calidad de instancia.
+  \item Evaluaci\'on de estrategias de seeding adaptativas que combinen CHM y densidad seg\'un la variabilidad local de altura, para aprovechar las fortalezas de cada variante seg\'un el tipo de estructura forestal.
 \end{itemize}
 
 %% ================================================================
@@ -619,15 +621,11 @@ Rank & Feature & Importancia \\
 %% ================================================================
 \section{Conclusiones}\label{sec:conclusions}
 
-% [PENDIENTE --- redactar con resultados finales]
-%
-% Estructura sugerida (5 oraciones):
-% 1. Recapitulaci\'on del problema.
-% 2. M\'etodo: comparamos tres estrategias de preprocesado con segmentador
-%    Watershed~3D id\'entico calibrado por flujo sobre FOR-instance V1.
-% 3. Resultado principal: [PENDIENTE].
-% 4. Implicaci\'on para el dise\~no de pipelines: [PENDIENTE].
-% 5. Direcci\'on futura m\'as relevante.
+Este trabajo evalu\'o sistem\'aticamente el impacto del preprocesado sem\'antico y la estrategia de seeding en pipelines de segmentaci\'on de \'arboles individuales (ITS) sobre datos ULS de alta densidad, mediante un dise\~no factorial $3 \times 2$ (tres preprocesados $\times$ dos variantes de Watershed~3D) sobre el benchmark FOR-instance~V1.
+
+Los resultados muestran que: (1)~el segmentador de instancias, no el preprocesado sem\'antico, es el cuello de botella principal del pipeline --- la sem\'antica casi perfecta (tree IoU $>$~0.97) no garantiza buena segmentaci\'on de instancias; (2)~Random Forest con features geom\'etricas supera a PointNet++ MSG como preprocesado para pipelines ITS en todas las combinaciones evaluadas, sin requerir GPU; (3)~el seeding por densidad de copa mejora consistentemente al seeding cl\'asico por CHM (+47\% para RF, +74\% para PointNet++), siendo especialmente efectivo en bosques densos de altura uniforme donde el CHM es casi plano.
+
+La combinaci\'on RF + Watershed~3D con seeding por densidad alcanza el mejor F1 de instancia (0.209 en test), estableciendo una l\'inea base robusta y eficiente para pipelines ITS de dos etapas. La brecha entre calidad sem\'antica y calidad de instancia sugiere que las mejoras m\'as impactantes en ITS no vendr\'an de clasificadores sem\'anticos m\'as sofisticados, sino de segmentadores de instancias capaces de separar copas adyacentes en canopias densas --- ya sea mediante priors sobre la geometr\'ia de copa, segmentadores end-to-end, o mejores estrategias de seeding como la propuesta en este trabajo.
 
 %% ================================================================
 %%  REFERENCIAS

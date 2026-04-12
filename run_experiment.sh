@@ -136,12 +136,45 @@ if (( START_FROM <= 11 )); then
         '
 fi
 
-# === PASO 12: Tablas comparativas finales ===
+# === PASO 12: Tablas comparativas finales (baseline + rf + pointnet2) ===
 if (( START_FROM <= 12 )); then
     run_step 12 "Tablas comparativas val + test" \
         bash -c '
             python -m forest_its.evaluation.run_evaluation --methods baseline rf pointnet2 --split val && \
             python -m forest_its.evaluation.run_evaluation --methods baseline rf pointnet2 --split test
+        '
+fi
+
+# === PASO 13: Grid search Watershed Density (rf_density + pointnet2_density) ===
+if (( START_FROM <= 13 )); then
+    run_step 13 "Grid search Watershed Density (rf_density + pointnet2_density)" \
+        python -m forest_its.evaluation.grid_search --methods rf_density pointnet2_density
+fi
+
+# === PASO 14: RF Density instancias — val + test ===
+if (( START_FROM <= 14 )); then
+    run_step 14 "RF Density instancias — val + test" \
+        bash -c '
+            python -m forest_its.methods.rf_density.run_rf_density_pipeline --stage instance --split val && \
+            python -m forest_its.methods.rf_density.run_rf_density_pipeline --stage instance --split test
+        '
+fi
+
+# === PASO 15: PointNet++ Density instancias — val + test ===
+if (( START_FROM <= 15 )); then
+    run_step 15 "PointNet++ Density instancias — val + test" \
+        bash -c '
+            python -m forest_its.methods.pointnet2_density.run_pointnet2_density_pipeline --stage instance --split val && \
+            python -m forest_its.methods.pointnet2_density.run_pointnet2_density_pipeline --stage instance --split test
+        '
+fi
+
+# === PASO 16: Tablas comparativas finales (todos los métodos) ===
+if (( START_FROM <= 16 )); then
+    run_step 16 "Tablas comparativas todos los métodos (val + test)" \
+        bash -c '
+            python -m forest_its.evaluation.run_evaluation --methods baseline rf pointnet2 rf_density pointnet2_density --split val && \
+            python -m forest_its.evaluation.run_evaluation --methods baseline rf pointnet2 rf_density pointnet2_density --split test
         '
 fi
 

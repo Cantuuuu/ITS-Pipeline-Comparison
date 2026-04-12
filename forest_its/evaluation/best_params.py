@@ -59,10 +59,14 @@ def load_best_watershed_params(method: str, cfg) -> dict:
         )
 
     row = row.iloc[0]
-    return {
+    params = {
         "voxel_size": float(row["voxel_size"]),
         "gaussian_sigma": float(row["gaussian_sigma"]),
         "min_crown_radius_m": float(row["min_crown_radius_m"]),
         "min_tree_height": float(cfg.watershed.min_tree_height),
         "min_points_per_tree": int(cfg.watershed.min_points_per_tree),
     }
+    # rf_density incluye top_band_m calibrado por grid search
+    if "top_band_m" in row.index:
+        params["top_band_m"] = float(row["top_band_m"])
+    return params
