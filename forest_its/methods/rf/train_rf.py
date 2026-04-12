@@ -3,21 +3,31 @@ Entrena el Random Forest para clasificación semántica binaria (árbol/no-árbo
 sobre los plots de entrenamiento de FOR-instance.
 
 Flujo:
-  1. Cargar splits (train/val)
+  1. Cargar splits (train/val) y ordenar plots alfabéticamente
   2. Para cada plot: load_las -> process_plot -> compute_features_for_plot
-  3. Submuestreo balanceado (max MAX_POINTS_PER_CLASS por clase)
-  4. Entrenar RF con hiperparámetros de config.yaml
-  5. Evaluar en val
-  6. Guardar modelo y feature importances
+     y submuestreo balanceado por plot (max_samples_per_plot por clase) con
+     semilla reproducible derivada del nombre del archivo (zlib.crc32).
+  3. Concatenar los subsets resultantes.
+  4. Entrenar RF con hiperparámetros de config.yaml.
+  5. Evaluar en val.
+  6. Guardar modelo y feature importances.
+
+El submuestreo por plot equipara la contribución de cada sitio al conjunto
+final y evita que los sitios con plots grandes (NIBIO) dominen el
+entrenamiento. La semilla efectiva por plot se deriva de forma
+determinística como `(random_state + crc32(stem)) & 0x7FFFFFFF` (suma
+con máscara de 31 bits), de modo que cada plot recibe siempre el mismo
+subconjunto de puntos con independencia del orden de iteración.
 
 Hiperparámetros (Weinmann et al. 2017):
-  - n_estimators=200: suficiente para convergencia con 28 features
+  - n_estimators=200: suficiente para convergencia con 27 features
   - max_depth=None: crecimiento completo, el ensemble regulariza
   - class_weight='balanced': compensa desbalance árbol/no-árbol
 """
 
 import sys
 import time
+import zlib
 import logging
 import numpy as np
 import pandas as pd
@@ -33,7 +43,7 @@ from forest_its.data.dataset import load_las, get_binary_labels, load_splits
 from forest_its.data.splits import get_train_val_split
 from forest_its.preprocessing.normalize_height import process_plot
 from forest_its.preprocessing.features_rf import (
-    compute_features_for_plot, FEATURE_NAMES_28,
+    compute_features_for_plot, FEATURE_NAMES_27,
 )
 from forest_its.evaluation.semantic_metrics import compute_semantic_metrics
 
@@ -101,54 +111,79 @@ def train_rf(cfg):
         random_state=cfg.data.random_state,
     )
 
+    # Orden determinístico de plots para reproducibilidad entre corridas.
+    train_paths = sorted(train_paths, key=lambda p: p.stem)
+    val_paths = sorted(val_paths, key=lambda p: p.stem)
+
     logger.info(f"Train plots: {len(train_paths)}, Val plots: {len(val_paths)}")
 
-    # --- Extraer features de train ---
-    logger.info("=== Extracting features (train) ===")
+    # --- Extraer features de train con submuestreo balanceado por plot ---
+    # El submuestreo se aplica *dentro* de cada plot con semilla reproducible
+    # derivada del nombre del archivo, para equiparar la contribución de cada
+    # sitio al conjunto final (§4.3 del paper). La alternativa de submuestrear
+    # globalmente tras concatenar sesga el modelo hacia los sitios con plots
+    # grandes (NIBIO).
+    max_per_plot = int(cfg.rf.max_samples_per_plot)
+    logger.info(
+        f"=== Extracting features (train) with per-plot subsampling "
+        f"(max {max_per_plot} pts/class/plot) ==="
+    )
     all_features = []
     all_labels = []
+    total_tree = 0
+    total_notree = 0
 
     for las_path in tqdm(train_paths, desc="Train features"):
         try:
             feats, labels = _load_and_extract(las_path, cfg, output_dir, logger)
-            all_features.append(feats)
-            all_labels.append(labels)
         except Exception as e:
             logger.error(f"  ERROR {las_path.stem}: {e}")
             continue
 
-    X_train = np.concatenate(all_features, axis=0)
-    y_train = np.concatenate(all_labels, axis=0)
+        # Semilla determinística por plot: la combinación (random_state base,
+        # CRC32 del stem) asegura que cada plot siempre recibe los mismos
+        # puntos sin depender del orden de iteración.
+        plot_seed = (
+            cfg.rf.random_state + zlib.crc32(las_path.stem.encode("utf-8"))
+        ) & 0x7FFFFFFF
+        rng_plot = np.random.default_rng(plot_seed)
 
-    n_tree = (y_train == 1).sum()
-    n_notree = (y_train == 0).sum()
-    logger.info(f"Train total: {len(y_train)} pts, "
-                f"tree={n_tree}, non-tree={n_notree}")
+        idx_tree = np.where(labels == 1)[0]
+        idx_notree = np.where(labels == 0)[0]
 
-    # --- Submuestreo balanceado ---
-    max_per_class = cfg.rf.max_points_per_class
-    rng = np.random.RandomState(cfg.rf.random_state)
+        if len(idx_tree) > max_per_plot:
+            idx_tree = rng_plot.choice(idx_tree, max_per_plot, replace=False)
+        if len(idx_notree) > max_per_plot:
+            idx_notree = rng_plot.choice(idx_notree, max_per_plot, replace=False)
 
-    idx_tree = np.where(y_train == 1)[0]
-    idx_notree = np.where(y_train == 0)[0]
+        idx_sub = np.sort(np.concatenate([idx_tree, idx_notree]))
+        feats_sub = feats[idx_sub]
+        labels_sub = labels[idx_sub]
 
-    if len(idx_tree) > max_per_class:
-        idx_tree = rng.choice(idx_tree, max_per_class, replace=False)
-    if len(idx_notree) > max_per_class:
-        idx_notree = rng.choice(idx_notree, max_per_class, replace=False)
+        all_features.append(feats_sub)
+        all_labels.append(labels_sub)
+        total_tree += len(idx_tree)
+        total_notree += len(idx_notree)
 
-    idx_sub = np.sort(np.concatenate([idx_tree, idx_notree]))
-    X_train_sub = X_train[idx_sub]
-    y_train_sub = y_train[idx_sub]
+        logger.info(
+            f"  {las_path.stem}: kept tree={len(idx_tree)}, "
+            f"non-tree={len(idx_notree)}"
+        )
 
-    logger.info(f"After subsampling: {len(y_train_sub)} pts "
-                f"(tree={len(idx_tree)}, non-tree={len(idx_notree)})")
+    X_train_sub = np.concatenate(all_features, axis=0)
+    y_train_sub = np.concatenate(all_labels, axis=0)
+
+    logger.info(
+        f"Train total after per-plot subsampling: {len(y_train_sub)} pts "
+        f"(tree={total_tree}, non-tree={total_notree})"
+    )
 
     # --- Entrenar RF ---
     logger.info("=== Training Random Forest ===")
     clf = RandomForestClassifier(
         n_estimators=cfg.rf.n_estimators,
         max_depth=cfg.rf.max_depth,
+        max_features="sqrt",
         class_weight=cfg.rf.class_weight,
         n_jobs=cfg.rf.n_jobs,
         random_state=cfg.rf.random_state,
@@ -168,7 +203,7 @@ def train_rf(cfg):
     # --- Feature importances ---
     importances = clf.feature_importances_
     imp_df = pd.DataFrame({
-        "feature": FEATURE_NAMES_28,
+        "feature": FEATURE_NAMES_27,
         "importance": importances,
     }).sort_values("importance", ascending=False)
     imp_path = model_dir / "rf_feature_importance.csv"
@@ -206,7 +241,7 @@ def train_rf(cfg):
         logger.info(f"  mIoU:       {sem_metrics['miou']:.4f}")
         logger.info(f"  IoU tree:   {sem_metrics['iou_tree']:.4f}")
         logger.info(f"  IoU notree: {sem_metrics['iou_notree']:.4f}")
-        logger.info(f"  F1 weight:  {sem_metrics['f1_weighted']:.4f}")
+        logger.info(f"  seg F1:     {sem_metrics['seg_f1']:.4f}")
 
     t_total = time.time() - t_start
     logger.info(f"\nTotal time: {t_total:.1f}s")

@@ -1,21 +1,25 @@
 """
 Extracción de DTM (Digital Terrain Model) para normalización de altura.
 
-Estrategia de dos pasos:
-  1. Si hay puntos con Classification==2 (Terrain), usarlos directamente
-     como ground truth de suelo. Estos son los más confiables en FOR-instance.
-  2. Fallback: filtro morfológico mínimo (percentil 5 de Z por celda de grilla).
+Estrategia: para cada celda de la grilla horizontal de resolución
+configurable (0.5 m por defecto), se toma la mediana de Z sobre los
+puntos clasificados como suelo (clase 2 de FOR-instance). FOR-instance
+proporciona anotación humana de suelo de alta calidad, por lo que la
+mediana sobre puntos de clase 2 es más robusta y precisa que un filtro
+morfológico ciego (p. ej. percentil 5 sobre todos los puntos).
 
 Celdas vacías se rellenan por interpolación bilineal (scipy.interpolate.griddata),
-con fallback 'nearest' para bordes. Suavizado final con uniform_filter(size=5)
-para eliminar artefactos en transiciones de celda.
+con fallback 'nearest' para bordes. Suavizado final con un filtro
+gaussiano de sigma equivalente a una ventana 5×5 (σ ≈ 2.5 celdas) para
+reducir artefactos en transiciones de celda.
 
-Este enfoque es simple pero efectivo para UAV LiDAR forestal con alta densidad
-(~18k pts/m², Wielgosz et al. 2024).
+Si la nube no aporta puntos de clase 2 (caso no esperado en FOR-instance),
+se lanza ValueError explícitamente: el método requiere ground truth de
+suelo y la rama de fallback morfológico ha sido eliminada.
 """
 
 import numpy as np
-from scipy.ndimage import uniform_filter
+from scipy.ndimage import gaussian_filter
 from scipy.interpolate import RegularGridInterpolator, griddata
 
 
@@ -28,20 +32,23 @@ def extract_dtm(
     """
     Extrae el DTM de una nube de puntos de bosque.
 
-    Paso 1: si classification está disponible, usar puntos con
-    Classification==2 (Terrain) directamente como ground truth de suelo.
-    Paso 2 (fallback): filtro morfológico mínimo — percentil 5 de Z por celda.
-
-    Celdas sin puntos se rellenan por interpolación bilineal usando
+    Para cada celda de la grilla se toma la mediana de Z sobre los puntos
+    con Classification==2 (Terrain). Celdas sin puntos de suelo se
+    rellenan por interpolación bilineal usando
     scipy.interpolate.griddata(method='linear'), con fallback 'nearest'
-    para celdas en los bordes.
+    para celdas en los bordes. El DTM resultante se suaviza con un
+    filtro gaussiano de sigma equivalente a una ventana smooth_window×
+    smooth_window (σ = smooth_window / 2).
 
     Args:
         xyz: (N, 3) coordenadas 3D de la nube de puntos.
-        classification: (N,) etiquetas de clasificación opcionales.
-            Si se provee, los puntos con valor 2 se usan como terreno.
+        classification: (N,) etiquetas de clasificación. Obligatorio: el
+            DTM se construye exclusivamente a partir de puntos de
+            clase 2 (terreno) anotados.
         resolution: Tamaño de celda en metros (default 0.5m).
-        smooth_window: Tamaño del kernel de suavizado (default 5).
+        smooth_window: Tamaño nominal del kernel de suavizado (default 5).
+            Se traduce a un sigma del filtro gaussiano como
+            σ = smooth_window / 2.
 
     Returns:
         dtm_grid: (ny, nx) array float64 con elevaciones del terreno.
@@ -49,18 +56,20 @@ def extract_dtm(
         y_edges: (ny+1,) bordes de grilla en Y.
         x_centers: (nx,) centros de celda en X.
         y_centers: (ny,) centros de celda en Y.
+
+    Raises:
+        ValueError: si `classification` es None o no contiene puntos de
+            clase 2. Este método requiere ground truth de suelo (clase 2
+            de FOR-instance) y no implementa fallback morfológico.
     """
-    # Determinar puntos de suelo
-    use_terrain_class = False
-    if classification is not None:
-        terrain_mask = classification == 2
-        if terrain_mask.sum() > 100:
-            xyz_ground = xyz[terrain_mask]
-            use_terrain_class = True
-        else:
-            xyz_ground = xyz
-    else:
-        xyz_ground = xyz
+    if classification is None or (classification == 2).sum() == 0:
+        raise ValueError(
+            "extract_dtm requiere puntos clasificados como suelo "
+            "(clase 2 de FOR-instance); ningún plot del benchmark "
+            "carece de esta clase, así que un input sin clase 2 indica "
+            "un bug en el cargador o un dataset distinto."
+        )
+    xyz_ground = xyz[classification == 2]
 
     # Usar el extent de TODA la nube para la grilla (no solo los puntos de suelo)
     x_min, y_min = xyz[:, 0].min(), xyz[:, 1].min()
@@ -95,12 +104,9 @@ def extract_dtm(
     for cell in np.unique(cell_idx):
         cy, cx = divmod(int(cell), nx)
         cell_z = xyz_ground[cell_idx == cell, 2]
-        if use_terrain_class:
-            # Con puntos de terreno GT, la mediana es más robusta
-            dtm_grid[cy, cx] = np.median(cell_z)
-        else:
-            # Sin GT, percentil 5 como aproximación al suelo
-            dtm_grid[cy, cx] = np.percentile(cell_z, 5)
+        # Mediana sobre puntos de clase 2 (terreno anotado): robusta a
+        # outliers de baja altura como hojarasca o vegetación rasante.
+        dtm_grid[cy, cx] = np.median(cell_z)
 
     # Rellenar celdas vacías con interpolación bilineal
     valid_mask = ~np.isnan(dtm_grid)
@@ -125,8 +131,13 @@ def extract_dtm(
     elif not valid_mask.any():
         dtm_grid[:] = xyz[:, 2].min()
 
-    # Suavizar para eliminar artefactos
-    dtm_grid = uniform_filter(dtm_grid.astype(np.float64), size=smooth_window)
+    # Suavizar con un filtro gaussiano cuyo sigma equivale a una ventana
+    # smooth_window x smooth_window (σ = smooth_window / 2). Convención
+    # más común en la literatura de DTM forestal que el filtro media.
+    dtm_grid = gaussian_filter(
+        dtm_grid.astype(np.float64),
+        sigma=smooth_window / 2.0,
+    )
 
     return dtm_grid, x_edges, y_edges, x_centers, y_centers
 

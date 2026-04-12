@@ -17,17 +17,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from forest_its.data.dataset import load_las, get_binary_labels
 from forest_its.preprocessing.normalize_height import process_plot
-from forest_its.methods.pointnet2.predict_pn2 import load_model
+from forest_its.methods.pointnet2.predict_pointnet2 import load_model
 
 import torch
-from torch.cuda.amp import autocast
+from torch.amp import autocast
+
+from forest_its.methods.pointnet2.device_utils import select_device
 
 
 def run_diagnostic():
     cfg = OmegaConf.load(
         Path(__file__).resolve().parent.parent.parent / "configs" / "config.yaml"
     )
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = select_device()
     print(f"Device: {device}")
 
     las_path = Path(cfg.paths.dataset_root) / "CULS" / "plot_3_annotated.las"
@@ -45,7 +47,7 @@ def run_diagnostic():
 
     model = load_model(cfg, device)
 
-    # ── replicate predict_plot_pn2 but save covered_mask ──────────────────────
+    # ── replicate predict_plot_pointnet2 but save covered_mask ────────────────
     xyz_all = data["xyz"].astype(np.float32)
     hag_all = data["hag"].astype(np.float32)
     intensity_all = data["intensity"].astype(np.float32)
@@ -70,7 +72,7 @@ def run_diagnostic():
     prob_sum = np.zeros((N, 2), dtype=np.float32)
     prob_count = np.zeros(N, dtype=np.int32)
 
-    _INFER_BATCH = 4
+    _INFER_BATCH = 16
     model.eval()
     with torch.no_grad():
         done = 0
@@ -95,7 +97,11 @@ def run_diagnostic():
 
             xyz_t = torch.from_numpy(np.stack(b_xyz)).to(device)
             feat_t = torch.from_numpy(np.stack(b_feat)).to(device)
-            with autocast(enabled=cfg.pointnet2.mixed_precision):
+            with autocast(
+                device_type=device.type,
+                dtype=torch.bfloat16,
+                enabled=cfg.pointnet2.mixed_precision,
+            ):
                 logits = model(xyz_t, feat_t)
             probs_batch = torch.exp(logits).float().cpu().numpy()
             for indices, probs in zip(b_idx, probs_batch):

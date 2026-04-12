@@ -22,6 +22,12 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 
+# Colecciones excluidas explícitamente del estudio (paper §3.1). NIBIO2
+# no forma parte de FOR-instance V1 y se descarta aunque aparezca tanto
+# en el CSV oficial como en disco.
+EXCLUDE_FOLDERS = frozenset({"NIBIO2"})
+
+
 def load_las(path: Path) -> Dict[str, np.ndarray]:
     """
     Carga un archivo .las de FOR-instance.
@@ -120,8 +126,11 @@ def load_splits(dataset_root: Path) -> Tuple[List[Path], List[Path]]:
     El CSV oficial tiene columnas: path, folder, split.
     'split' es 'dev' o 'test'. 'path' es relativo a dataset_root.
 
-    Filtra automáticamente archivos que no existen en disco (ej. NIBIO2
-    referenciado en el CSV pero no descargado).
+    Filtra automáticamente:
+      - Colecciones en `EXCLUDE_FOLDERS` (actualmente NIBIO2, excluida
+        explícitamente por protocolo del paper §3.1).
+      - Archivos que no existen en disco (p. ej. colecciones no
+        descargadas en una copia parcial del dataset).
 
     El split oficial es necesario para comparabilidad con ForAINet
     (Henrich et al., 2024) y SegmentAnyTree (Wielgosz et al., 2024),
@@ -139,19 +148,32 @@ def load_splits(dataset_root: Path) -> Tuple[List[Path], List[Path]]:
 
     dev_paths = []
     test_paths = []
-    skipped = 0
+    skipped_missing = 0
+    skipped_excluded = 0
 
     for _, row in df.iterrows():
+        folder = str(row.get("folder", "")).strip()
+        if folder in EXCLUDE_FOLDERS:
+            skipped_excluded += 1
+            continue
+
         file_path = dataset_root / row["path"]
         if not file_path.exists():
-            skipped += 1
+            skipped_missing += 1
             continue
         if row["split"] == "dev":
             dev_paths.append(file_path)
         elif row["split"] == "test":
             test_paths.append(file_path)
 
-    if skipped > 0:
-        print(f"  [INFO] Skipped {skipped} files from CSV not found on disk")
+    if skipped_excluded > 0:
+        print(
+            f"  [INFO] Excluded {skipped_excluded} files from folders "
+            f"{sorted(EXCLUDE_FOLDERS)} by protocol (paper §3.1)"
+        )
+    if skipped_missing > 0:
+        print(
+            f"  [INFO] Skipped {skipped_missing} files from CSV not found on disk"
+        )
 
     return dev_paths, test_paths

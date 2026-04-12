@@ -59,6 +59,14 @@ def match_instances(
     Returns:
         Diccionario con: TP, FP, FN, precision, recall, f1, coverage,
         n_gt_trees, n_pred_trees, mean_iou_matched.
+
+    Definiciones:
+        - recall = TP / (TP + FN), con TP definido por el greedy matching
+          1-a-1 (un GT cuenta como recuperado solo si gana el emparejamiento).
+        - coverage = fracción de GT trees con al menos una predicción cuyo
+          IoU 3D >= iou_threshold, sin imponer matching único. Coverage ≥
+          recall siempre, y la brecha (coverage − recall) mide la
+          fragmentación de copas.
     """
     pred_unique = np.unique(pred_ids)
     pred_unique = pred_unique[pred_unique > 0]
@@ -92,12 +100,23 @@ def match_instances(
             gt_mask = gt_ids == gid
             iou_matrix[i, j] = compute_iou_3d(pred_mask, gt_mask)
 
+    # Coverage: fracción de GT trees con al menos una predicción sobre
+    # el umbral, sin imponer matching único. Se computa antes del greedy
+    # para que sobre-segmentación (varias preds cubriendo el mismo GT) no
+    # lo penalice. Coverage ≥ recall por construcción.
+    covered_gt = int((iou_matrix >= iou_threshold).any(axis=0).sum())
+
     # Greedy matching por IoU descendente
     matched_pred = set()
     matched_gt = set()
     matched_ious = []
 
-    flat_indices = np.argsort(-iou_matrix.ravel())
+    # Stable sort para que los empates se desempaten por (pred_idx, gt_idx)
+    # ascendente: con índice plano = pred_idx * n_gt + gt_idx, el orden
+    # natural del sort estable da prioridad al menor pred_id y luego al
+    # menor gt_id (ya que pred_unique y gt_unique vienen ordenados por
+    # np.unique).
+    flat_indices = np.argsort(-iou_matrix.ravel(), kind="stable")
     for flat_idx in flat_indices:
         i, j = divmod(int(flat_idx), n_gt)
         iou_val = iou_matrix[i, j]
@@ -115,7 +134,7 @@ def match_instances(
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
-    coverage = tp / n_gt
+    coverage = covered_gt / n_gt
     mean_iou = float(np.mean(matched_ious)) if matched_ious else 0.0
 
     return {

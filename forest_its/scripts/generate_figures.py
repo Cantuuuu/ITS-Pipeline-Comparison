@@ -41,9 +41,9 @@ from omegaconf import OmegaConf
 METHOD_COLORS = {
     "Baseline": "#888888",
     "RF+WS":    "#2196F3",
-    "PN2+WS":   "#FF5722",
+    "PointNet2+WS":   "#FF5722",
 }
-METHOD_LABELS = ["Baseline", "RF+WS", "PN2+WS"]
+METHOD_LABELS = ["Baseline", "RF+WS", "PointNet2+WS"]
 
 SEM_COLORS = {
     0: "#CCCCCC",   # Unclassified
@@ -303,7 +303,7 @@ def fig_1_2_dataset_stats(cfg):
         # Load val metrics
         rf_df   = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
         base_df = pd.read_csv(OUTPUT_DIR / "results" / "baseline_metrics_val.csv")
-        pn2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         # Compute per-institution means (val plots only)
         insts = ["CULS", "NIBIO", "SCION"]
@@ -394,27 +394,27 @@ def fig_1_2_dataset_stats(cfg):
 # GROUP 2 — SEMANTIC RESULTS
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _sem_comparison_one_plot(data, pred_rf, pred_pn2, stem, rf_row, pn2_row):
+def _sem_comparison_one_plot(data, pred_rf, pred_pointnet2, stem, rf_row, pointnet2_row):
     """Create the 3-col semantic comparison figure for one plot."""
     cls = data["classification"]
     xyz = data["xyz"]
     rgb_gt = sem_class_to_rgb(cls)
 
     pred_rf_bin  = pred_rf.get("semantic_pred", np.zeros(len(xyz), dtype=np.int32))
-    pred_pn2_bin = pred_pn2.get("semantic_pred", np.zeros(len(xyz), dtype=np.int32))
+    pred_pointnet2_bin = pred_pointnet2.get("semantic_pred", np.zeros(len(xyz), dtype=np.int32))
     rgb_rf  = binary_pred_to_rgb(pred_rf_bin)
-    rgb_pn2 = binary_pred_to_rgb(pred_pn2_bin)
+    rgb_pointnet2 = binary_pred_to_rgb(pred_pointnet2_bin)
 
     rf_miou  = rf_row["sem_miou"]  if rf_row is not None else float("nan")
-    pn2_miou = pn2_row["sem_miou"] if pn2_row is not None else float("nan")
+    pointnet2_miou = pointnet2_row["sem_miou"] if pointnet2_row is not None else float("nan")
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5), facecolor="white")
     titles = [
         "Ground-Truth Semantic Labels",
         f"RF Prediction\nmIoU = {rf_miou:.4f}",
-        f"PN2 Prediction\nmIoU = {pn2_miou:.4f}",
+        f"PointNet2 Prediction\nmIoU = {pointnet2_miou:.4f}",
     ]
-    rgbs = [rgb_gt, rgb_rf, rgb_pn2]
+    rgbs = [rgb_gt, rgb_rf, rgb_pointnet2]
 
     for ax, rgb, title in zip(axes, rgbs, titles):
         img, xmin, xmax, ymin, ymax = rasterize_xy(xyz, rgb)
@@ -445,11 +445,11 @@ def _sem_comparison_one_plot(data, pred_rf, pred_pn2, stem, rf_row, pn2_row):
 
 
 def fig_2_1_semantic_comparison(cfg):
-    """Semantic GT vs RF vs PN2 for CULS plot_1 and NIBIO plot_2."""
+    """Semantic GT vs RF vs PointNet2 for CULS plot_1 and NIBIO plot_2."""
     name = "2.1_semantic_comparison"
     try:
         rf_df  = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
-        pn2_df = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         target_plots = [
             ("CULS",  "plot_1_annotated"),
@@ -459,12 +459,12 @@ def fig_2_1_semantic_comparison(cfg):
             log.info(f"    Semantic comparison: {stem}")
             data     = load_plot_data(inst, stem, cfg)
             pred_rf  = load_predictions("rf",  stem)
-            pred_pn2 = load_predictions("pn2", stem)
+            pred_pointnet2 = load_predictions("pointnet2", stem)
 
             rf_row  = rf_df[rf_df["plot"]  == stem].iloc[0] if len(rf_df[rf_df["plot"]  == stem]) else None
-            pn2_row = pn2_df[pn2_df["plot"] == stem].iloc[0] if len(pn2_df[pn2_df["plot"] == stem]) else None
+            pointnet2_row = pointnet2_df[pointnet2_df["plot"] == stem].iloc[0] if len(pointnet2_df[pointnet2_df["plot"] == stem]) else None
 
-            fig = _sem_comparison_one_plot(data, pred_rf, pred_pn2, stem, rf_row, pn2_row)
+            fig = _sem_comparison_one_plot(data, pred_rf, pred_pointnet2, stem, rf_row, pointnet2_row)
             out = FIGURES_DIR / "02_semantic_results" / f"semantic_comparison_{stem.replace('_annotated','')}.png"
             save_fig(fig, out)
     except Exception as e:
@@ -473,7 +473,7 @@ def fig_2_1_semantic_comparison(cfg):
 
 
 def fig_2_2_semantic_error_maps(cfg):
-    """Error maps (TP/FP/FN/TN) for RF and PN2 on CULS plot_1 and NIBIO plot_2."""
+    """Error maps (TP/FP/FN/TN) for RF and PointNet2 on CULS plot_1 and NIBIO plot_2."""
     name = "2.2_semantic_error_maps"
     ERR_COLORS = {
         "TP":  "#2D6A4F",   # green
@@ -483,7 +483,7 @@ def fig_2_2_semantic_error_maps(cfg):
         "Excl": "#CCCCCC",  # grey
     }
     try:
-        pn2_df = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
         rf_df  = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
 
         target_plots = [
@@ -494,7 +494,7 @@ def fig_2_2_semantic_error_maps(cfg):
             log.info(f"    Error map: {stem}")
             data     = load_plot_data(inst, stem, cfg)
             pred_rf  = load_predictions("rf",  stem)
-            pred_pn2 = load_predictions("pn2", stem)
+            pred_pointnet2 = load_predictions("pointnet2", stem)
             xyz  = data["xyz"]
             cls  = data["classification"]
             gt   = get_binary_labels(cls)   # -1, 0, 1
@@ -502,7 +502,7 @@ def fig_2_2_semantic_error_maps(cfg):
             fig, axes = plt.subplots(1, 2, figsize=(14, 5), facecolor="white")
             for ax, (pred_bin, method_name) in zip(axes, [
                 (pred_rf.get("semantic_pred"), "RF"),
-                (pred_pn2.get("semantic_pred"), "PN2"),
+                (pred_pointnet2.get("semantic_pred"), "PointNet2"),
             ]):
                 if pred_bin is None:
                     ax.set_title(f"{method_name} — no pred"); continue
@@ -538,14 +538,14 @@ def fig_2_2_semantic_error_maps(cfg):
 
 
 def fig_2_3_confusion_matrices(cfg):
-    """2x2 confusion matrices: RF and PN2 on CULS and NIBIO."""
+    """2x2 confusion matrices: RF and PointNet2 on CULS and NIBIO."""
     name = "2.3_confusion_matrices"
     try:
         target = [
             ("CULS",  "plot_1_annotated"),
             ("NIBIO", "plot_2_annotated"),
         ]
-        methods = [("rf", "RF"), ("pn2", "PN2")]
+        methods = [("rf", "RF"), ("pointnet2", "PointNet2")]
 
         fig, axes = plt.subplots(2, 2, figsize=(10, 9), facecolor="white")
         fig.suptitle("Semantic Confusion Matrices (Recall-normalized)", fontsize=12,
@@ -595,7 +595,7 @@ def fig_2_3_confusion_matrices(cfg):
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _instance_panel(data, stem, metrics_by_method: dict, out_path: Path, title: str):
-    """4-col instance comparison panel: GT / Baseline / RF / PN2."""
+    """4-col instance comparison panel: GT / Baseline / RF / PointNet2."""
     xyz = data["xyz"]
     gt_ids = data["tree_id"]
     rgb_gt = instance_id_to_rgb(gt_ids)
@@ -603,7 +603,7 @@ def _instance_panel(data, stem, metrics_by_method: dict, out_path: Path, title: 
     methods_info = [
         ("baseline", "Baseline"),
         ("rf",       "RF+WS"),
-        ("pn2",      "PN2+WS"),
+        ("pointnet2", "PointNet2+WS"),
     ]
     preds = []
     for mkey, mlabel in methods_info:
@@ -656,13 +656,13 @@ def fig_3_1_instance_culs_plot1(cfg):
 
         rf_df   = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
         base_df = pd.read_csv(OUTPUT_DIR / "results" / "baseline_metrics_val.csv")
-        pn2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         def get_m(df, s): return df[df["plot"] == s].iloc[0].to_dict() if len(df[df["plot"]==s]) else {}
         metrics = {
             "Baseline": get_m(base_df, stem),
             "RF+WS":    get_m(rf_df, stem),
-            "PN2+WS":   get_m(pn2_df, stem),
+            "PointNet2+WS":   get_m(pointnet2_df, stem),
         }
         out = FIGURES_DIR / "03_instance_results" / "instance_comparison_culs_plot1.png"
         _instance_panel(data, stem, metrics, out,
@@ -681,13 +681,13 @@ def fig_3_2_instance_nibio_plot2(cfg):
 
         rf_df   = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
         base_df = pd.read_csv(OUTPUT_DIR / "results" / "baseline_metrics_val.csv")
-        pn2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         def get_m(df, s): return df[df["plot"] == s].iloc[0].to_dict() if len(df[df["plot"]==s]) else {}
         metrics = {
             "Baseline": get_m(base_df, stem),
             "RF+WS":    get_m(rf_df, stem),
-            "PN2+WS":   get_m(pn2_df, stem),
+            "PointNet2+WS":   get_m(pointnet2_df, stem),
         }
         out = FIGURES_DIR / "03_instance_results" / "instance_comparison_nibio_plot2.png"
         _instance_panel(data, stem, metrics, out,
@@ -708,7 +708,7 @@ def fig_3_3_instance_3d_lateral(cfg):
         gt_ids = data["tree_id"]
 
         pred_rf  = load_predictions("rf", stem)
-        pred_pn2 = load_predictions("pn2", stem)
+        pred_pointnet2 = load_predictions("pointnet2", stem)
 
         fig, axes = plt.subplots(1, 3, figsize=(18, 6), facecolor="white")
         fig.suptitle("CULS plot_1 — Lateral View (XZ projection)\n"
@@ -717,7 +717,7 @@ def fig_3_3_instance_3d_lateral(cfg):
         datasets = [
             ("Ground-Truth",    gt_ids),
             ("RF+WS Predicted", pred_rf["instance_ids"]),
-            ("PN2+WS Predicted", pred_pn2["instance_ids"]),
+            ("PointNet2+WS Predicted", pred_pointnet2["instance_ids"]),
         ]
         for ax, (title, ids) in zip(axes, datasets):
             rgb = instance_id_to_rgb(ids)
@@ -830,13 +830,13 @@ def fig_4_1_f1_by_institution():
     try:
         rf_df   = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
         base_df = pd.read_csv(OUTPUT_DIR / "results" / "baseline_metrics_val.csv")
-        pn2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         insts = ["CULS", "NIBIO", "SCION"]
         data_by_method = {
             "Baseline": base_df,
             "RF+WS":    rf_df,
-            "PN2+WS":   pn2_df,
+            "PointNet2+WS":   pointnet2_df,
         }
 
         means = {}
@@ -894,7 +894,7 @@ def fig_4_2_decoupling_scatter():
     name = "4.2_semantic_vs_instance_decoupling"
     try:
         rf_df  = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
-        pn2_df = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         INST_MARKERS = {"CULS": "o", "NIBIO": "s", "SCION": "^"}
         INST_LABELS  = {"CULS": "CULS (open)", "NIBIO": "NIBIO (dense)", "SCION": "SCION (plantation)"}
@@ -911,7 +911,7 @@ def fig_4_2_decoupling_scatter():
         plotted_insts   = set()
         for df, method_label, color in [
             (rf_df,  "RF+WS",  METHOD_COLORS["RF+WS"]),
-            (pn2_df, "PN2+WS", METHOD_COLORS["PN2+WS"]),
+            (pointnet2_df, "PointNet2+WS", METHOD_COLORS["PointNet2+WS"]),
         ]:
             for inst, marker in INST_MARKERS.items():
                 sub = df[df["institution"] == inst]
@@ -938,7 +938,7 @@ def fig_4_2_decoupling_scatter():
         # Custom legend
         method_handles = [
             mpatches.Patch(color=METHOD_COLORS["RF+WS"],  label="RF+WS"),
-            mpatches.Patch(color=METHOD_COLORS["PN2+WS"], label="PN2+WS"),
+            mpatches.Patch(color=METHOD_COLORS["PointNet2+WS"], label="PointNet2+WS"),
         ]
         inst_handles = [
             plt.Line2D([0], [0], marker="o", color="grey", linestyle="none", ms=8, label="CULS (open)"),
@@ -972,14 +972,14 @@ def fig_4_3_underseg_overseg():
     try:
         rf_df   = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
         base_df = pd.read_csv(OUTPUT_DIR / "results" / "baseline_metrics_val.csv")
-        pn2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         plots_order = ["plot_1_annotated", "plot_3_annotated",
                        "plot_9_annotated", "plot_2_annotated", "plot_35_annotated"]
         methods_data = [
             ("Baseline", base_df, METHOD_COLORS["Baseline"]),
             ("RF+WS",    rf_df,   METHOD_COLORS["RF+WS"]),
-            ("PN2+WS",   pn2_df,  METHOD_COLORS["PN2+WS"]),
+            ("PointNet2+WS",   pointnet2_df,  METHOD_COLORS["PointNet2+WS"]),
         ]
 
         rows = []
@@ -1048,10 +1048,10 @@ def fig_4_3_underseg_overseg():
 
 
 def fig_4_4_training_curve():
-    """PN2 training curve: train/val mIoU by epoch."""
+    """PointNet2 training curve: train/val mIoU by epoch."""
     name = "4.4_training_curve"
     try:
-        log_path = OUTPUT_DIR / "logs" / "train_pn2.log"
+        log_path = OUTPUT_DIR / "logs" / "train_pointnet2.log"
         if not log_path.exists():
             fig_failed(name, f"log not found: {log_path}")
             return
@@ -1111,7 +1111,7 @@ def fig_4_4_training_curve():
         ax1.spines[["top"]].set_visible(False)
 
         fig.tight_layout()
-        out = FIGURES_DIR / "04_metrics" / "pn2_training_curve.png"
+        out = FIGURES_DIR / "04_metrics" / "pointnet2_training_curve.png"
         return save_fig(fig, out)
     except Exception as e:
         fig_failed(name, e)
@@ -1133,7 +1133,7 @@ def generate_html():
     try:
         rf_df   = pd.read_csv(OUTPUT_DIR / "results" / "rf_metrics_val.csv")
         base_df = pd.read_csv(OUTPUT_DIR / "results" / "baseline_metrics_val.csv")
-        pn2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pn2_metrics_val.csv")
+        pointnet2_df  = pd.read_csv(OUTPUT_DIR / "results" / "pointnet2_metrics_val.csv")
 
         def img_tag(path: Path, caption: str, width: str = "100%") -> str:
             if not path.exists():
@@ -1173,10 +1173,10 @@ def generate_html():
         summary_rows = [
             ("Baseline (A)", "0.211", "0.268", "0.192", "0.721", "0.280", "—"),
             ("RF+WS (B)",    "0.344", "0.461", "0.326", "0.674", "0.181", "0.994"),
-            ("PN2+WS (C)",   "0.288", "0.388", "0.263", "0.737", "0.162", "0.988"),
+            ("PointNet2+WS (C)",   "0.288", "0.388", "0.263", "0.737", "0.162", "0.988"),
         ]
         by_inst_rows = [
-            ("CULS",  "0.471", "0.732", "0.635", "PN2+WS ✓"),
+            ("CULS",  "0.471", "0.732", "0.635", "PointNet2+WS ✓"),
             ("NIBIO", "0.023", "0.129", "0.085", "RF+WS ✓"),
             ("SCION", "0.065", "0.000", "0.000", "Baseline"),
         ]
@@ -1240,14 +1240,14 @@ figcaption {{font-size:12px;color:#555;margin-top:4px;font-style:italic}}
 
 <h3>F1 by Institution</h3>
 <table>
-<tr><th>Institution</th><th>Baseline</th><th>RF+WS</th><th>PN2+WS</th><th>Best</th></tr>
+<tr><th>Institution</th><th>Baseline</th><th>RF+WS</th><th>PointNet2+WS</th><th>Best</th></tr>
 {''.join(f'<tr><td><b>{r[0]}</b></td>'+
          ''.join(f'<td style="text-align:center">{v}</td>' for v in r[1:])+'</tr>'
          for r in by_inst_rows)}
 </table>
 
 <div class="note">
-<b>Central finding:</b> Semantic preprocessing quality (RF mIoU=0.994, PN2 mIoU=0.988)
+<b>Central finding:</b> Semantic preprocessing quality (RF mIoU=0.994, PointNet2 mIoU=0.988)
 does not translate into instance segmentation quality in dense forests (NIBIO/SCION:
 under-seg &gt;0.95 for all methods). The Watershed 3D algorithm is the bottleneck.
 Semantic preprocessing only helps in open forests (CULS).
@@ -1265,15 +1265,15 @@ Semantic preprocessing only helps in open forests (CULS).
 <!-- ─────────────────────────── SECTION 2 ─────────────────────────── -->
 <h2 id="sec2">2. Semantic Results</h2>
 {img_tag(FD/"02_semantic_results"/"semantic_comparison_plot_1.png",
-         "Figure 2.1a — CULS plot_1: GT semantic labels vs. RF and PN2 predictions (top view).")}
+         "Figure 2.1a — CULS plot_1: GT semantic labels vs. RF and PointNet2 predictions (top view).")}
 {img_tag(FD/"02_semantic_results"/"semantic_comparison_plot_2.png",
-         "Figure 2.1b — NIBIO plot_2: GT semantic labels vs. RF and PN2 predictions (top view).")}
+         "Figure 2.1b — NIBIO plot_2: GT semantic labels vs. RF and PointNet2 predictions (top view).")}
 {img_tag(FD/"02_semantic_results"/"semantic_error_map_plot_1.png",
-         "Figure 2.2a — CULS plot_1: Semantic error map (TP/TN/FP/FN) for RF and PN2.")}
+         "Figure 2.2a — CULS plot_1: Semantic error map (TP/TN/FP/FN) for RF and PointNet2.")}
 {img_tag(FD/"02_semantic_results"/"semantic_error_map_plot_2.png",
-         "Figure 2.2b — NIBIO plot_2: Semantic error map for RF and PN2.")}
+         "Figure 2.2b — NIBIO plot_2: Semantic error map for RF and PointNet2.")}
 {img_tag(FD/"02_semantic_results"/"confusion_matrices.png",
-         "Figure 2.3 — Recall-normalised confusion matrices for RF and PN2 on CULS and NIBIO.")}
+         "Figure 2.3 — Recall-normalised confusion matrices for RF and PointNet2 on CULS and NIBIO.")}
 
 <!-- ─────────────────────────── SECTION 3 ─────────────────────────── -->
 <h2 id="sec3">3. Instance Results</h2>
@@ -1285,7 +1285,7 @@ Semantic preprocessing only helps in open forests (CULS).
          "is the dominant failure mode for all methods.")}
 {img_tag(FD/"03_instance_results"/"instance_3d_lateral_culs_plot1.png",
          "Figure 3.3 — CULS plot_1: lateral (XZ) view of instance segmentation. "
-         "Left=GT, Centre=RF, Right=PN2.")}
+         "Left=GT, Centre=RF, Right=PointNet2.")}
 {img_tag(FD/"03_instance_results"/"underseg_illustration.png",
          "Figure 3.4 — NIBIO plot_2: 20×20m zoom illustrating severe under-segmentation. "
          "Dashed circles highlight GT trees merged into a single predicted segment.")}
@@ -1301,7 +1301,7 @@ Semantic preprocessing only helps in open forests (CULS).
          "coexists with near-zero instance F1 in dense forests.")}
 {img_tag(FD/"04_metrics"/"underseg_overseg_comparison.png",
          "Figure 4.3 — Under- vs. over-segmentation by plot and method.")}
-{img_tag(FD/"04_metrics"/"pn2_training_curve.png",
+{img_tag(FD/"04_metrics"/"pointnet2_training_curve.png",
          "Figure 4.4 — PointNet++ MSG training curve. "
          "Best val mIoU = 0.9914 at epoch 87.")}
 
@@ -1314,21 +1314,21 @@ Semantic preprocessing only helps in open forests (CULS).
 <h3>RF + Watershed (Method B)</h3>
 {metric_table(rf_df, "RF+WS", sem=True)}
 
-<h3>PN2 + Watershed (Method C)</h3>
-{metric_table(pn2_df, "PN2+WS", sem=True)}
+<h3>PointNet2 + Watershed (Method C)</h3>
+{metric_table(pointnet2_df, "PointNet2+WS", sem=True)}
 
 <!-- ─────────────────────────── SECTION 6 ─────────────────────────── -->
 <h2 id="sec6">6. Methodological Notes</h2>
 <table>
 <tr><th>Component</th><th>Decision</th><th>Justification</th></tr>
-<tr><td>Watershed sigma</td><td>gaussian_sigma=0.5</td><td>Yang et al. (2020) IEEE JSTARS</td></tr>
+<tr><td>Watershed sigma</td><td>gaussian_sigma=0.5</td><td>Moderate smoothing of 3D density grid; preserves crown structure</td></tr>
 <tr><td>Min crown radius</td><td>min_crown_radius_m=1.0</td><td>Empirical on val set</td></tr>
 <tr><td>RF features</td><td>28 = 14×2 scales (k=20, k=50)</td><td>Weinmann et al. (2017) ISPRS</td></tr>
 <tr><td>RF class weight</td><td>balanced</td><td>Severe tree/non-tree imbalance</td></tr>
-<tr><td>PN2 architecture</td><td>MSG over SSG</td><td>Qi et al. (2017) — variable density 10×</td></tr>
-<tr><td>PN2 input features</td><td>5 channels (XYZ + HAG + intensity)</td><td>Wang et al. (2023) Remote Sens.</td></tr>
-<tr><td>PN2 training</td><td>AMP fp16, GradScaler</td><td>RTX 4050 6GB VRAM constraint</td></tr>
-<tr><td>PN2 inference</td><td>Global random subsampling, n_passes=N/8192×3</td><td>Matches training distribution; sliding window causes 14× scale mismatch</td></tr>
+<tr><td>PointNet2 architecture</td><td>MSG over SSG</td><td>Qi et al. (2017) — variable density 10×</td></tr>
+<tr><td>PointNet2 input features</td><td>5 channels (XYZ + HAG + intensity)</td><td>Wang et al. (2023) Remote Sens.</td></tr>
+<tr><td>PointNet2 training</td><td>AMP bf16 (no GradScaler)</td><td>Apple Silicon MPS / unified memory</td></tr>
+<tr><td>PointNet2 inference</td><td>Global random subsampling, n_passes=N/8192×3</td><td>Matches training distribution; sliding window causes 14× scale mismatch</td></tr>
 <tr><td>KNN coverage</td><td>scipy.cKDTree k=3 (1/dist weighted)</td><td>Closes 14% coverage gap; sem_mIoU 0.908→0.988</td></tr>
 <tr><td>Instance metric</td><td>IoU threshold=0.5</td><td>Standard ForAINet and SegmentAnyTree</td></tr>
 </table>
@@ -1370,7 +1370,7 @@ def main():
         ("4.1 F1 by institution",        fig_4_1_f1_by_institution),
         ("4.2 decoupling scatter",       fig_4_2_decoupling_scatter),
         ("4.3 under/over segmentation",  fig_4_3_underseg_overseg),
-        ("4.4 PN2 training curve",       fig_4_4_training_curve),
+        ("4.4 PointNet2 training curve",       fig_4_4_training_curve),
         # Group 2
         ("2.1 semantic comparison",      lambda: fig_2_1_semantic_comparison(cfg)),
         ("2.2 semantic error maps",      lambda: fig_2_2_semantic_error_maps(cfg)),

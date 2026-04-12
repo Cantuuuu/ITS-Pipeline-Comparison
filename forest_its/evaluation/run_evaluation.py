@@ -80,24 +80,21 @@ def run_evaluation(cfg, methods: list, split: str = "val"):
     print("\nPer-institution metrics:")
     print(inst_metrics.to_string())
 
-    # --- Promedio global ponderado por número de árboles GT ---
+    # --- Promedio global (sin ponderar, consistente con paper §5.2) ---
     print("\n" + "-" * 80)
-    print("Global averages (weighted by n_gt_trees):")
+    print("Global averages (unweighted mean over plots):")
     print("-" * 80)
 
     for method in methods:
         mdf = combined[combined["method"] == method]
         if mdf.empty:
             continue
-        total_gt = mdf["n_gt_trees"].sum()
-        total_pred = mdf["n_pred_trees"].sum() if "n_pred_trees" in mdf.columns else 0
-        if total_gt > 0:
-            w_prec = (mdf["precision"] * mdf["n_gt_trees"]).sum() / total_gt
-            w_rec = (mdf["recall"] * mdf["n_gt_trees"]).sum() / total_gt
-            w_f1 = (mdf["f1"] * mdf["n_gt_trees"]).sum() / total_gt
-            w_cov = (mdf["coverage"] * mdf["n_gt_trees"]).sum() / total_gt
-        else:
-            w_prec = w_rec = w_f1 = w_cov = 0.0
+        total_gt = int(mdf["n_gt_trees"].sum())
+        total_pred = int(mdf["n_pred_trees"].sum()) if "n_pred_trees" in mdf.columns else 0
+        prec = mdf["precision"].mean()
+        rec = mdf["recall"].mean()
+        f1 = mdf["f1"].mean()
+        cov = mdf["coverage"].mean()
 
         mean_iou = mdf["mean_iou_matched"].mean() if "mean_iou_matched" in mdf.columns else float("nan")
         over_seg = mdf["over_seg"].mean() if "over_seg" in mdf.columns else float("nan")
@@ -108,8 +105,8 @@ def run_evaluation(cfg, methods: list, split: str = "val"):
             sem_miou = mdf["sem_miou"].mean()
             sem_str = f"  mIoU_sem: {sem_miou:.4f}"
 
-        print(f"  {method:12s} | P: {w_prec:.4f} | R: {w_rec:.4f} | "
-              f"F1: {w_f1:.4f} | Cov: {w_cov:.4f} | "
+        print(f"  {method:12s} | P: {prec:.4f} | R: {rec:.4f} | "
+              f"F1: {f1:.4f} | Cov: {cov:.4f} | "
               f"GT: {total_gt} | Pred: {total_pred} | "
               f"IoU_match: {mean_iou:.4f} | "
               f"OverSeg: {over_seg:.4f} | UnderSeg: {under_seg:.4f}"

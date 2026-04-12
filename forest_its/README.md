@@ -11,7 +11,7 @@ Metodo A - Baseline (sin preprocesamiento semantico)
   Nube normalizada (excl. clases 0,3) --> Watershed 3D --> Instancias
 
 Metodo B - Random Forest + Watershed
-  Nube normalizada --> 28 features --> RF (arbol/no-arbol)
+  Nube normalizada --> 27 features --> RF (arbol/no-arbol)
   --> Filtrar "arbol" --> Watershed 3D --> Instancias
 
 Metodo C - PointNet++ MSG + Watershed
@@ -45,40 +45,73 @@ puntos totales, distribucion de clases, arboles unicos, densidad, etc.
 
 ## Orden de ejecucion
 
+El watershed 3D comparte hiperparametros entre flujos, pero los puntos de
+entrada difieren (todos los puntos validos vs. solo los clasificados como
+arbol). Para una comparacion justa, cada flujo calibra sus parametros de
+watershed mediante grid search sobre el split val. El flujo de trabajo es:
+
+```
+  1. Entrenar semanticos    (RF, PointNet++)
+  2. Correr stage semantic  (genera semantic_pred sobre val)
+  3. Grid search            (calibra watershed params por flujo sobre val)
+  4. Stage instance val     (metricas val con best params)
+  5. Stage instance test    (metricas test finales con best params)
+```
+
 ### 1. Explorar dataset
 ```bash
 python scripts/explore_dataset.py
 ```
 
-### 2. Metodo A - Baseline
+### 2. Entrenar modelos semanticos
 ```bash
-python -m forest_its.methods.baseline.run_baseline
-```
-
-### 3. Metodo B - Random Forest
-```bash
-# Entrenar RF
+# Random Forest (Flujo B)
 python -m forest_its.methods.rf.train_rf
 
-# Ejecutar pipeline completo (prediccion + watershed)
-python -m forest_its.methods.rf.run_rf_pipeline
+# PointNet++ MSG (Flujo C)
+python -m forest_its.methods.pointnet2.train_pointnet2
 ```
 
-### 4. Metodo C - PointNet++ MSG
+### 3. Stage semantic — generar predicciones semanticas val
 ```bash
-# Entrenar PointNet++
-python -m forest_its.methods.pointnet2.train_pn2
+# Flujo B: RF
+python -m forest_its.methods.rf.run_rf_pipeline --stage semantic --split val
 
-# Ejecutar pipeline completo (prediccion + watershed)
-python -m forest_its.methods.pointnet2.run_pn2_pipeline
+# Flujo C: PointNet++
+python -m forest_its.methods.pointnet2.run_pointnet2_pipeline --stage semantic --split val
 ```
 
-### 5. Evaluacion
+(El Flujo A baseline no tiene preprocesamiento semantico — salta este paso.)
+
+### 4. Grid search de watershed params por flujo
 ```bash
-python -m forest_its.evaluation.run_evaluation
+python -m forest_its.evaluation.grid_search --methods baseline rf pointnet2
 ```
 
-### 6. Visualizacion
+Produce `output/results/grid_search_best_params.csv`, consultado por los
+pipelines en la stage instance. Sin este paso los pipelines fallan con
+`MissingBestParamsError`.
+
+### 5. Stage instance — metricas val (con best params)
+```bash
+# Flujo A: Baseline
+python -m forest_its.methods.baseline.run_baseline --split val
+
+# Flujo B: RF
+python -m forest_its.methods.rf.run_rf_pipeline --stage instance --split val
+
+# Flujo C: PointNet++
+python -m forest_its.methods.pointnet2.run_pointnet2_pipeline --stage instance --split val
+```
+
+### 6. Stage instance — metricas test finales
+```bash
+python -m forest_its.methods.baseline.run_baseline --split test
+python -m forest_its.methods.rf.run_rf_pipeline --stage instance --split test
+python -m forest_its.methods.pointnet2.run_pointnet2_pipeline --stage instance --split test
+```
+
+### 7. Visualizacion
 ```bash
 python scripts/visualize_results.py
 ```

@@ -2,8 +2,8 @@
 Entrenamiento PointNet++ MSG para segmentación semántica binaria.
 
 Uso:
-  python -m forest_its.methods.pointnet2.train_pn2 --dry-run   # smoke test SOLO
-  python -m forest_its.methods.pointnet2.train_pn2              # entrenamiento real (MAÑANA)
+  python -m forest_its.methods.pointnet2.train_pointnet2 --dry-run   # smoke test SOLO
+  python -m forest_its.methods.pointnet2.train_pointnet2              # entrenamiento real (MAÑANA)
 
 --dry-run:
   - Carga 1 plot de train
@@ -12,13 +12,14 @@ Uso:
   - Calcula loss
   - Hace 1 backward pass
   - Imprime shapes de todos los tensores intermedios
-  - Verifica que cabe en VRAM (RTX 4050, 6GB)
+  - Verifica que el modelo cabe en memoria del dispositivo activo
   - NO guarda nada, NO itera epochs
   - Tiempo esperado: < 60 segundos
 """
 
 import sys
 import time
+import random
 import argparse
 import logging
 import numpy as np
@@ -26,10 +27,19 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import autocast
 from pathlib import Path
 from omegaconf import OmegaConf
 from tqdm import tqdm
+
+
+def set_seed(seed: int):
+    """Fija semillas globales para reproducibilidad (paper §3.3, Apéndice A)."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
@@ -37,11 +47,24 @@ from forest_its.data.dataset import load_splits
 from forest_its.data.splits import get_train_val_split
 from forest_its.data.pointnet2_dataset import ForInstanceDataset
 from forest_its.methods.pointnet2.model_msg import PointNet2SemSegMSG
+from forest_its.methods.pointnet2.device_utils import select_device
+
+
+# bf16 (sin GradScaler) en MPS y CUDA modernas; fp16 en CUDA antiguas no se usa
+# en este repo. La función `_amp_dtype` centraliza la elección para que las
+# llamadas a autocast queden uniformes.
+def _amp_dtype(device: torch.device) -> torch.dtype:
+    return torch.bfloat16
 
 
 # ─────────────────────────────────────────────
 # Utilidades
 # ─────────────────────────────────────────────
+
+def _worker_init_fn(worker_id: int):
+    """Seed numpy por worker para que augmentation no se duplique entre workers."""
+    np.random.seed(42 + worker_id)
+
 
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -130,7 +153,11 @@ def smoke_test(cfg, model: nn.Module, device: torch.device):
 
     t0 = time.time()
     model.train()
-    with autocast(enabled=(device.type == "cuda" and cfg.pointnet2.mixed_precision)):
+    with autocast(
+        device_type=device.type,
+        dtype=_amp_dtype(device),
+        enabled=cfg.pointnet2.mixed_precision,
+    ):
         logits = model(xyz, features)  # (1, N, 2)
         loss = criterion(
             logits.reshape(-1, cfg.pointnet2.num_classes),
@@ -158,8 +185,12 @@ def smoke_test(cfg, model: nn.Module, device: torch.device):
         print(f"VRAM usada: {vram_mb:.0f} MB / {vram_total_mb:.0f} MB disponibles")
         if vram_mb > 4000:
             print("  [WARN] VRAM > 4GB — considera reducir batch_size a 2 en config.yaml")
+    elif device.type == "mps":
+        # MPS no expone max_memory_allocated estable. Usa Activity Monitor o
+        # `sudo powermetrics --samplers gpu_power` para medir externamente.
+        print("Memoria: unified (MPS) — ver Activity Monitor para uso real")
     else:
-        print("VRAM usada: N/A (CPU)")
+        print("Memoria: N/A (CPU)")
 
     print(f"Tiempo forward: {t_fwd:.0f} ms")
 
@@ -172,13 +203,12 @@ def train_epoch(
     model: nn.Module,
     loader: DataLoader,
     optimizer: torch.optim.Optimizer,
-    scaler: GradScaler,
     criterion: nn.Module,
     device: torch.device,
     cfg,
     logger: logging.Logger,
 ) -> dict:
-    """Entrena una época completa con AMP."""
+    """Entrena una época completa con AMP (bf16, sin GradScaler)."""
     model.train()
     total_loss = 0.0
     all_pred, all_true = [], []
@@ -190,18 +220,22 @@ def train_epoch(
 
         optimizer.zero_grad()
 
-        with autocast(enabled=cfg.pointnet2.mixed_precision):
+        with autocast(
+            device_type=device.type,
+            dtype=_amp_dtype(device),
+            enabled=cfg.pointnet2.mixed_precision,
+        ):
             logits = model(xyz, features)        # (B, N, 2)
             loss = criterion(
                 logits.reshape(-1, cfg.pointnet2.num_classes),
                 labels.reshape(-1),
             )
 
-        scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
+        # bf16 mantiene el rango de exponente de fp32, así que no se necesita
+        # loss scaling. GradScaler además es CUDA-only y rompería en MPS.
+        loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.pointnet2.grad_clip)
-        scaler.step(optimizer)
-        scaler.update()
+        optimizer.step()
 
         total_loss += loss.item() * labels.numel()
         pred = logits.argmax(dim=-1).reshape(-1).cpu()
@@ -238,7 +272,11 @@ def val_epoch(
             features = points[:, :, 3:].to(device)
             labels = labels.to(device)
 
-            with autocast(enabled=cfg.pointnet2.mixed_precision):
+            with autocast(
+                device_type=device.type,
+                dtype=_amp_dtype(device),
+                enabled=cfg.pointnet2.mixed_precision,
+            ):
                 logits = model(xyz, features)
                 loss = criterion(
                     logits.reshape(-1, cfg.pointnet2.num_classes),
@@ -286,11 +324,16 @@ def main():
             Path(__file__).resolve().parent.parent.parent / "configs" / "config.yaml"
         )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Reproducibilidad: fijar semillas antes de cualquier inicialización
+    set_seed(int(cfg.data.random_state))
+
+    device = select_device()
     print(f"Device: {device}")
     if device.type == "cuda":
         print(f"  GPU: {torch.cuda.get_device_name(device)}")
         print(f"  VRAM: {torch.cuda.get_device_properties(device).total_memory / 1024**2:.0f} MB")
+    elif device.type == "mps":
+        print("  Backend: Apple Silicon MPS (memoria unificada)")
 
     # Construir modelo
     model = PointNet2SemSegMSG(num_classes=cfg.pointnet2.num_classes).to(device)
@@ -309,10 +352,10 @@ def main():
     # Setup logging
     log_dir = output_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("train_pn2")
+    logger = logging.getLogger("train_pointnet2")
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
-    fh = logging.FileHandler(log_dir / "train_pn2.log", mode="w")
+    fh = logging.FileHandler(log_dir / "train_pointnet2.log", mode="w")
     fh.setFormatter(logging.Formatter("%(asctime)s | %(message)s"))
     logger.addHandler(fh)
     sh = logging.StreamHandler()
@@ -334,18 +377,32 @@ def main():
     logger.info("Loading val dataset...")
     val_dataset = ForInstanceDataset(val_paths, cfg.pointnet2.num_points, augment=False, cfg=cfg)
 
+    nw_train = int(cfg.pointnet2.get("num_workers", 6))
+    nw_val = int(cfg.pointnet2.get("num_workers_val", 4))
+
+    # Generator para shuffle determinista del DataLoader
+    seed = int(cfg.data.random_state)
+    g = torch.Generator()
+    g.manual_seed(seed)
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=cfg.pointnet2.batch_size,
         shuffle=True,
-        num_workers=0,  # Windows: no multiprocessing
+        num_workers=nw_train,
+        persistent_workers=nw_train > 0,
+        pin_memory=False,  # MPS no se beneficia de pinned memory
         drop_last=True,
+        worker_init_fn=_worker_init_fn,
+        generator=g,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=cfg.pointnet2.batch_size,
         shuffle=False,
-        num_workers=0,
+        num_workers=nw_val,
+        persistent_workers=nw_val > 0,
+        pin_memory=False,
     )
 
     # Loss con pesos de clase
@@ -362,8 +419,6 @@ def main():
     scheduler = optim.lr_scheduler.StepLR(
         optimizer, step_size=cfg.pointnet2.step_size, gamma=cfg.pointnet2.gamma,
     )
-    scaler = GradScaler(enabled=cfg.pointnet2.mixed_precision)
-
     # Paths de guardado
     models_dir = output_dir / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -380,7 +435,7 @@ def main():
     for epoch in range(1, cfg.pointnet2.epochs + 1):
         t_ep = time.time()
 
-        train_metrics = train_epoch(model, train_loader, optimizer, scaler, criterion, device, cfg, logger)
+        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, cfg, logger)
         val_metrics = val_epoch(model, val_loader, criterion, device, cfg)
 
         scheduler.step()

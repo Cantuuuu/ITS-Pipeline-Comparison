@@ -1,5 +1,5 @@
 paths:
-  dataset_root: "C:/Users/cantu/Downloads/FORinstance_dataset"
+  dataset_root: "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/FORinstance_dataset"
   output_dir: "output"
 
 data:
@@ -27,7 +27,8 @@ rf:
   class_weight: "balanced"
   n_jobs: -1
   random_state: 42
-  max_points_per_class: 500000  # submuestreo para entrenamiento
+  max_samples_per_plot: 12000   # submuestreo por plot y por clase (balanceado
+                                # por sitio — ver §4.3 del paper)
 
 pointnet2:
   # Arquitectura
@@ -35,33 +36,31 @@ pointnet2:
   num_points: 8192          # puntos por muestra en train/inference
 
   # Entrenamiento
-  batch_size: 4             # limitado por RTX 4050 6GB VRAM
+  batch_size: 16            # M4 Pro unified memory; subir a 24-32 si entra
   lr: 0.001
   weight_decay: 0.0001
   step_size: 20             # StepLR decay cada N epochs
   gamma: 0.7                # factor de decay
   epochs: 100
   grad_clip: 1.0
-  mixed_precision: true     # torch.cuda.amp para RTX 4050
+  mixed_precision: true     # bf16 autocast (MPS y CUDA modernas, sin GradScaler)
+  num_workers: 6            # DataLoader workers para train (M4 Pro: 10 P-cores)
+  num_workers_val: 4        # DataLoader workers para val
 
   # Augmentation
   jitter_std: 0.02          # std del jitter gaussiano en XYZ
   scale_min: 0.9
   scale_max: 1.1
 
-  # Inference
-  block_size: 10.0          # metros, tamaño de bloque sliding window
-  block_overlap: 2.0        # metros, solapamiento entre bloques
-
   # Paths
-  model_save_path: "models/pn2_best_model.pth"
-  model_checkpoint_path: "models/pn2_checkpoint.pth"
+  model_save_path: "models/pointnet2_best_model.pth"
+  model_checkpoint_path: "models/pointnet2_checkpoint.pth"
 
 watershed:
   voxel_size: 0.1            # metros
   min_tree_height: 2.0       # metros, altura mínima para considerar árbol
   min_points_per_tree: 50    # puntos mínimos por segmento
-  gaussian_sigma: 0.5        # suavizado gaussiano, Yang et al. (2020) IEEE JSTARS
+  gaussian_sigma: 0.5        # suavizado gaussiano del grid de densidad 3D
   min_crown_radius_m: 1.0    # radio mínimo entre copas para peak_local_max
 
 evaluation:

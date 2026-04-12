@@ -1,45 +1,62 @@
 """
-Extracción de 28 features geométricos para clasificación semántica con Random Forest.
+Extracción de 27 features geométricos para clasificación semántica con Random Forest.
 
 Features basados en Weinmann et al. (2017) "Geometric Features and their Relevance
 for 3D Point Cloud Classification" (ISPRS Annals). Los 8 features eigen-based
 se calculan a partir de la matriz de covarianza del vecindario KNN, y se
-complementan con features de altura, densidad y retorno LiDAR.
+complementan con features de altura, rugosidad y retorno LiDAR.
 
-Se calculan en DOS escalas (k=20 y k=50 vecinos), dando 28 features por punto.
-La estrategia multi-escala sigue Weinmann et al. (2015) y permite capturar
-tanto detalle fino (ramas, troncos) como contexto grueso (posición en el rodal).
+Se computan 13 features dependientes de escala en DOS escalas (k=20 y k=50
+vecinos) más 1 feature de densidad volumétrica compartida entre escalas
+(cardinalidad real de la bola de radio fijo `density_radius`, calculada
+una sola vez por punto vía `cKDTree.query_ball_point`), dando 27 features
+por punto. La estrategia multi-escala sigue Weinmann et al. (2015) y
+permite capturar tanto detalle fino (ramas, troncos) como contexto grueso
+(posición en el rodal).
 
 Convención de normalización de eigenvalores:
-  - Features 1-6 y 8: usan eigenvalores normalizados λi_norm = λi / (λ1+λ2+λ3)
-  - Feature 7 (suma): usa eigenvalores crudos λ1+λ2+λ3
-  Esto sigue Weinmann et al. (2013, 2014, 2015).
+  - Features 1-6 y 8 usan eigenvalores normalizados λi_norm = λi / (λ1+λ2+λ3).
+    En particular, omnivarianza se computa como (λ1n * λ2n * λ3n)^(1/3) en
+    el espacio normalizado, siguiendo Weinmann et al. (2013, 2014, 2015).
+  - Feature 7 (suma) es el único descriptor que usa eigenvalores crudos
+    λ1+λ2+λ3 (traza de la matriz de covarianza, no una distribución).
+  Las features derivadas como ratios (linealidad, planaridad, esfericidad,
+  anisotropía, cambio de curvatura) son invariantes a la normalización y
+  coinciden en ambas convenciones.
 
 Covarianza se calcula con divisor k (no k-1), consistente con la literatura
 de point cloud processing (Weinmann 2014, 2015).
 
 KNN usa scipy.spatial.cKDTree para portabilidad y estabilidad.
-Para datasets dispersos (RMIT ~454 pts/m²), se aplica un radio máximo de
-búsqueda: si el k-ésimo vecino está a más de max_neighbor_distance metros,
-se usan solo los vecinos dentro de ese radio.
+Para los plots de menor densidad del benchmark (ver §3.1 del paper
+para el rango medido sobre las cinco colecciones), se aplica un radio
+máximo de búsqueda: si el k-ésimo vecino está a más de
+max_neighbor_distance metros, se usan solo los vecinos dentro de ese
+radio.
 """
 
+import os
 import numpy as np
 from scipy.spatial import cKDTree
 from pathlib import Path
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
 
-# Nombres de features para reportes y análisis de importancia
+# Nombres de features para reportes y análisis de importancia.
+# Los 13 features de FEATURE_NAMES_BASE se computan a dos escalas (k=20, k=50);
+# `density` (cardinalidad volumétrica real) se computa una sola vez por punto
+# vía cKDTree.query_ball_point y se comparte entre escalas.
 FEATURE_NAMES_BASE = [
     "linearity", "planarity", "sphericity", "omnivariance",
     "anisotropy", "eigenentropy", "sum_eigenvalues", "change_curvature",
-    "HAG", "verticality", "density", "roughness", "height_range", "intensity",
+    "HAG", "verticality", "roughness", "height_range", "intensity",
 ]
 
-FEATURE_NAMES_28 = (
+FEATURE_NAMES_27 = (
     [f"{name}_k20" for name in FEATURE_NAMES_BASE]
     + [f"{name}_k50" for name in FEATURE_NAMES_BASE]
+    + ["density"]
 )
 
 
@@ -98,7 +115,8 @@ def compute_eigenfeatures(xyz_neighbors: np.ndarray) -> tuple:
     linearity = (lam1 - lam2) / lam1
     planarity = (lam2 - lam3) / lam1
     sphericity = lam3 / lam1
-    omnivariance = (lam1 * lam2 * lam3) ** (1.0 / 3.0)
+    # Omnivarianza en el espacio normalizado (Weinmann et al. 2015).
+    omnivariance = (l1n * l2n * l3n) ** (1.0 / 3.0)
     anisotropy = (lam1 - lam3) / lam1
     eigen_entropy = -(l1n * np.log(l1n + eps)
                       + l2n * np.log(l2n + eps)
@@ -119,40 +137,92 @@ def compute_local_features(
     point_intensity: float,
     normal: np.ndarray,
     neighbors_xyz: np.ndarray,
-    point_xyz: np.ndarray,
-    density_radius: float = 0.5,
 ) -> np.ndarray:
     """
-    Calcula los 6 features restantes (9-14) para un punto dado sus vecinos.
+    Calcula los 5 features locales dependientes de escala (no eigen-based).
 
     Features:
       9.  HAG — feature #1 según Bremer et al. (2023), peso=0.21
       10. Verticalidad: 1 - |dot(normal, [0,0,1])| — ángulo vs vertical
-      11. Densidad local: count de vecinos en radio fijo density_radius
-      12. Rugosidad: std(Z de vecinos)
-      13. Rango de altura: max(Z) - min(Z) en vecindario
-      14. Intensidad normalizada [0,1]
+      11. Rugosidad: std(Z de vecinos)
+      12. Rango de altura: max(Z) - min(Z) en vecindario
+      13. Intensidad normalizada [0,1]
+
+    La densidad volumétrica (cardinalidad de la bola de radio fijo
+    `density_radius`) ya no se computa aquí: se calcula una sola vez por
+    punto en `compute_features_batch` vía `cKDTree.query_ball_point` y
+    se concatena al final como feature compartida entre escalas.
 
     Args:
         point_hag: HAG del punto central.
         point_intensity: Intensidad normalizada.
         normal: (3,) normal local.
         neighbors_xyz: (k, 3) coordenadas de vecinos.
-        point_xyz: (3,) coordenadas del punto.
-        density_radius: Radio para densidad (metros).
 
     Returns:
-        (6,) float32.
+        (5,) float32.
     """
     verticality = 1.0 - abs(float(normal[2]))
-    dists = np.linalg.norm(neighbors_xyz - point_xyz, axis=1)
-    density = float(np.sum(dists <= density_radius))
     roughness = float(neighbors_xyz[:, 2].std())
     height_range = float(neighbors_xyz[:, 2].max() - neighbors_xyz[:, 2].min())
 
     return np.array([
-        point_hag, verticality, density, roughness, height_range, point_intensity,
+        point_hag, verticality, roughness, height_range, point_intensity,
     ], dtype=np.float32)
+
+
+def _features_chunk(
+    chunk_indices: np.ndarray,
+    xyz: np.ndarray,
+    hag: np.ndarray,
+    intensity: np.ndarray,
+    density_chunk: np.ndarray,
+    distances_chunk: np.ndarray,
+    indices_chunk: np.ndarray,
+    k_small: int,
+    k_large: int,
+    max_neighbor_distance: float,
+) -> np.ndarray:
+    """
+    Procesa un sub-rango de puntos. Función pura: no muta inputs.
+    Devuelve (len(chunk_indices), 27).
+
+    Layout de las 27 columnas:
+      [0:8]   eigen features k20    [8:13]  local features k20
+      [13:21] eigen features k50    [21:26] local features k50
+      [26]    density (compartida entre escalas)
+
+    Diseñada para ejecutarse en workers de joblib (loky). Recibe slices ya
+    extraídos de `distances`, `indices` y `density_per_point` para evitar
+    pasar los arrays completos por IPC.
+    """
+    n_points = xyz.shape[0]
+    n_chunk = len(chunk_indices)
+    out = np.zeros((n_chunk, 27), dtype=np.float32)
+
+    for local_i, i in enumerate(chunk_indices):
+        for scale_idx, k in enumerate([k_small, k_large]):
+            nbr_idx = indices_chunk[local_i, 1:k + 1]
+            nbr_dists = distances_chunk[local_i, 1:k + 1]
+
+            valid = (nbr_idx < n_points) & (nbr_dists <= max_neighbor_distance)
+            nbr_idx = nbr_idx[valid]
+
+            if len(nbr_idx) < 4:
+                continue
+
+            neighbors_xyz = xyz[nbr_idx]
+
+            eigen_feats, normal = compute_eigenfeatures(neighbors_xyz)
+            local_feats = compute_local_features(
+                hag[i], intensity[i], normal, neighbors_xyz,
+            )
+
+            out[local_i, scale_idx * 13: scale_idx * 13 + 8] = eigen_feats
+            out[local_i, scale_idx * 13 + 8: (scale_idx + 1) * 13] = local_feats
+
+    out[:, 26] = density_chunk
+    return out
 
 
 def compute_features_batch(
@@ -164,15 +234,20 @@ def compute_features_batch(
     batch_size: int = 10000,
     density_radius: float = 0.5,
     max_neighbor_distance: float = 5.0,
+    n_jobs: int = -1,
 ) -> np.ndarray:
     """
-    Calcula 28 features para TODOS los puntos de una nube.
+    Calcula 27 features para TODOS los puntos de una nube.
 
     Proceso:
       1. Construir KDTree global con scipy.spatial.cKDTree
-      2. Pre-query todos los k_large+1 vecinos de una vez
-      3. Para cada punto, extraer features a ambas escalas
-      4. Radio máximo: vecinos más allá de max_neighbor_distance se descartan
+      2. Pre-query todos los k_large+1 vecinos en paralelo (workers=-1)
+      3. Pre-computar densidad volumétrica real (cardinalidad de la bola
+         de radio density_radius) una sola vez por punto vía
+         tree.query_ball_point(..., return_length=True). Esta es la
+         feature #27, compartida entre escalas.
+      4. Particionar los puntos en chunks y delegar a workers loky
+      5. Radio máximo: vecinos más allá de max_neighbor_distance se descartan
 
     Args:
         xyz: (N, 3) float64.
@@ -180,57 +255,59 @@ def compute_features_batch(
         intensity: (N,) float32.
         k_small: Escala fina (20).
         k_large: Escala gruesa (50).
-        batch_size: Para barra de progreso.
-        density_radius: Radio densidad local (0.5m).
+        batch_size: Tamaño nominal de chunk para joblib (no afecta correctness).
+        density_radius: Radio para la densidad volumétrica (0.5m).
         max_neighbor_distance: Radio máximo KNN (5.0m).
+        n_jobs: Workers paralelos (-1 = todos los cores).
 
     Returns:
-        features: (N, 28) float32.
+        features: (N, 27) float32.
     """
     n_points = xyz.shape[0]
-    features = np.zeros((n_points, 28), dtype=np.float32)
 
-    # KDTree con scipy
+    # KDTree con scipy + query paralela (scipy >= 1.6 soporta workers=-1)
     tree = cKDTree(xyz)
-
-    # Pre-query todos los vecinos a escala grande (k_large+1 incluye self)
     max_k = k_large + 1
-    distances, indices = tree.query(xyz, k=max_k)
+    distances, indices = tree.query(xyz, k=max_k, workers=n_jobs)
 
-    n_batches = (n_points + batch_size - 1) // batch_size
+    # Densidad volumétrica real (cardinalidad de la bola de radio fijo).
+    # Una sola pasada por punto, sin acotamiento por k_large.
+    density_per_point = np.asarray(
+        tree.query_ball_point(xyz, r=density_radius, return_length=True),
+        dtype=np.float32,
+    )
 
-    for batch_idx in tqdm(range(n_batches), desc="Computing RF features"):
-        start = batch_idx * batch_size
-        end = min(start + batch_size, n_points)
+    # Decidir tamaño de chunk: balance entre overhead IPC y granularidad
+    # Por defecto ~1 chunk por core, mínimo `batch_size` puntos por chunk.
+    n_workers = os.cpu_count() if n_jobs == -1 else max(1, n_jobs)
+    chunk_size = max(batch_size, (n_points + n_workers - 1) // n_workers)
+    chunk_starts = list(range(0, n_points, chunk_size))
 
-        for i in range(start, end):
-            for scale_idx, k in enumerate([k_small, k_large]):
-                # Vecinos excluyendo self (índice 0)
-                nbr_idx = indices[i, 1:k + 1]
-                nbr_dists = distances[i, 1:k + 1]
+    # Cada chunk recibe slices ya extraídos para minimizar serialización
+    chunks = [
+        (
+            np.arange(s, min(s + chunk_size, n_points)),
+            density_per_point[s:min(s + chunk_size, n_points)],
+            distances[s:min(s + chunk_size, n_points)],
+            indices[s:min(s + chunk_size, n_points)],
+        )
+        for s in chunk_starts
+    ]
 
-                # Filtrar por radio máximo
-                valid = (nbr_idx < n_points) & (nbr_dists <= max_neighbor_distance)
-                nbr_idx = nbr_idx[valid]
+    print(
+        f"  RF features: {n_points:,} pts, {len(chunks)} chunks, "
+        f"n_jobs={n_workers}"
+    )
 
-                if len(nbr_idx) < 4:
-                    continue
+    results = Parallel(n_jobs=n_jobs, backend="loky", batch_size=1)(
+        delayed(_features_chunk)(
+            ch_idx, xyz, hag, intensity, ch_dens, ch_dist, ch_inds,
+            k_small, k_large, max_neighbor_distance,
+        )
+        for ch_idx, ch_dens, ch_dist, ch_inds in tqdm(chunks, desc="Computing RF features")
+    )
 
-                neighbors_xyz = xyz[nbr_idx]
-
-                # Eigen features (1-8)
-                eigen_feats, normal = compute_eigenfeatures(neighbors_xyz)
-
-                # Local features (9-14)
-                local_feats = compute_local_features(
-                    hag[i], intensity[i], normal,
-                    neighbors_xyz, xyz[i],
-                    density_radius=density_radius,
-                )
-
-                features[i, scale_idx * 14: scale_idx * 14 + 8] = eigen_feats
-                features[i, scale_idx * 14 + 8: (scale_idx + 1) * 14] = local_feats
-
+    features = np.concatenate(results, axis=0).astype(np.float32)
     return features
 
 
@@ -256,7 +333,7 @@ def compute_features_for_plot(
         force_recompute: Forzar recálculo.
 
     Returns:
-        features: (N_valid, 28) float32.
+        features: (N_valid, 27) float32.
     """
     from forest_its.data.dataset import get_binary_labels
 
@@ -270,10 +347,10 @@ def compute_features_for_plot(
 
     if cache_path.exists() and not force_recompute:
         features = np.load(cache_path)
-        if features.shape[0] == valid_mask.sum():
+        if features.shape[0] == valid_mask.sum() and features.shape[1] == 27:
             print(f"  Loaded cached features: {cache_path}")
             return features
-        print(f"  Cache size mismatch, recomputing...")
+        print(f"  Cache mismatch (expected (N_valid, 27)), recomputing...")
 
     xyz_valid = las_data["xyz"][valid_mask]
     hag_valid = las_data["hag"][valid_mask]

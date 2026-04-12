@@ -20,11 +20,12 @@ Estrategia de inferencia:
     4. Acumular probabilidades por punto; promediar al final
     5. Puntos no cubiertos → clase mayoritaria del plot
 
-  Cobertura esperada con n_passes = N / num_points * 3:
-    Para N=2M, num_points=8192: n_passes=732 → E[cobertura/punto] ≈ 86%
-
-  Tiempo estimado: ~0.1-0.2s por forward pass (eval mode) × n_passes / batch_size
-    ≈ 4.5 min para 5 plots val en RTX 4050.
+  Cobertura teórica con n_passes = clip(3·N / N_s, 50, 1000):
+    P(un punto no sea muestreado en una pasada) ≈ exp(-N_s/N)
+    P(un punto no sea muestreado tras n_passes) ≈ exp(-3) ≈ 5%
+    → cobertura por punto ≈ 95% antes del KNN final.
+    La interpolación KNN sobre puntos no cubiertos lleva la cobertura
+    efectiva a >99% en todos los plots observados.
 
 Referencia:
   Qi et al. (2017) PointNet++: el modelo fue diseñado para operar sobre
@@ -45,8 +46,9 @@ from forest_its.preprocessing.normalize_height import process_plot
 from forest_its.methods.pointnet2.model_msg import PointNet2SemSegMSG
 
 
-# Número de samples por forward pass en inferencia (>1 → eficiencia GPU)
-_INFER_BATCH = 4
+# Número de samples por forward pass en inferencia (>1 → eficiencia GPU).
+# 16 aprovecha la memoria unificada del M4 Pro; reducir si hay OOM en CUDA 6 GB.
+_INFER_BATCH = 16
 
 
 def compute_coverage(prob_count: np.ndarray) -> dict:
@@ -118,7 +120,7 @@ def assign_uncovered_points(
     return pred_proba
 
 
-def predict_plot_pn2(las_data: dict, model, cfg, device) -> tuple:
+def predict_plot_pointnet2(las_data: dict, model, cfg, device) -> tuple:
     """
     Inferencia PointNet++ sobre un plot completo.
 
@@ -138,7 +140,7 @@ def predict_plot_pn2(las_data: dict, model, cfg, device) -> tuple:
         pred_binary: (N,) int32 — clase predicha (0=no-árbol, 1=árbol).
         pred_proba:  (N, 2) float32 — probabilidades promediadas.
     """
-    from torch.cuda.amp import autocast
+    from torch.amp import autocast
 
     xyz_all = las_data["xyz"].astype(np.float32)        # (N, 3)
     hag_all = las_data["hag"].astype(np.float32)        # (N,)
@@ -147,6 +149,12 @@ def predict_plot_pn2(las_data: dict, model, cfg, device) -> tuple:
 
     num_points = int(cfg.pointnet2.num_points)          # 8192
     hag_max = float(cfg.preprocessing.hag_max)          # 50.0
+
+    # RNG local determinista para el submuestreo de inferencia. Se usa
+    # np.random.default_rng(seed) en vez de np.random.choice(...) global
+    # para garantizar que corridas repetidas de inferencia sobre el mismo
+    # plot produzcan exactamente las mismas predicciones (ver §3.3 del paper).
+    rng = np.random.default_rng(int(cfg.data.random_state))
 
     # Pre-centrado XY sobre puntos válidos (replica ForInstanceDataset.__init__)
     binary_labels = get_binary_labels(las_data["classification"])
@@ -182,9 +190,9 @@ def predict_plot_pn2(las_data: dict, model, cfg, device) -> tuple:
             for _ in range(b_size):
                 # Submuestreo global (replica ForInstanceDataset.__getitem__)
                 if N >= num_points:
-                    choice = np.random.choice(N, num_points, replace=False)
+                    choice = rng.choice(N, num_points, replace=False)
                 else:
-                    choice = np.random.choice(N, num_points, replace=True)
+                    choice = rng.choice(N, num_points, replace=True)
 
                 # Normalización per-sample (replica __getitem__)
                 xyz_s = xyz_c[choice].copy()
@@ -203,7 +211,11 @@ def predict_plot_pn2(las_data: dict, model, cfg, device) -> tuple:
             xyz_t = torch.from_numpy(np.stack(b_xyz)).to(device)   # (B, N, 3)
             feat_t = torch.from_numpy(np.stack(b_feat)).to(device)  # (B, N, 2)
 
-            with autocast(enabled=cfg.pointnet2.mixed_precision):
+            with autocast(
+                device_type=device.type,
+                dtype=torch.bfloat16,
+                enabled=cfg.pointnet2.mixed_precision,
+            ):
                 logits = model(xyz_t, feat_t)   # (B, num_points, 2) log-probs
 
             probs_batch = torch.exp(logits).float().cpu().numpy()   # (B, num_points, 2)
@@ -256,7 +268,7 @@ def load_model(cfg, device: torch.device) -> PointNet2SemSegMSG:
     if not model_path.exists():
         raise FileNotFoundError(
             f"Modelo PointNet++ no encontrado: {model_path}\n"
-            "Entrena primero con: python -m forest_its.methods.pointnet2.train_pn2"
+            "Entrena primero con: python -m forest_its.methods.pointnet2.train_pointnet2"
         )
     model = PointNet2SemSegMSG(num_classes=cfg.pointnet2.num_classes).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))

@@ -36,7 +36,8 @@ def compute_semantic_metrics(
     Returns:
         Diccionario con:
           accuracy, iou_tree, iou_notree, miou,
-          f1_weighted, f1_tree, f1_notree,
+          seg_f1 (= sklearn f1_score con pos_label=1, average='binary';
+          es la única F1 que aparece en las tablas del paper),
           confusion_matrix (2x2), n_points_evaluated.
     """
     if mask_valid is not None:
@@ -54,18 +55,17 @@ def compute_semantic_metrics(
     miou = float(iou.mean())
 
     acc = float(accuracy_score(y_true, y_pred))
-    f1_w = float(f1_score(y_true, y_pred, average="weighted", labels=[0, 1]))
-    f1_tree = float(f1_score(y_true, y_pred, pos_label=1, labels=[0, 1]))
-    f1_notree = float(f1_score(y_true, y_pred, pos_label=0, labels=[0, 1]))
+    seg_f1 = float(f1_score(
+        y_true, y_pred,
+        pos_label=1, labels=[0, 1], average="binary",
+    ))
 
     return {
         "accuracy": acc,
         "iou_tree": iou_tree,
         "iou_notree": iou_notree,
         "miou": miou,
-        "f1_weighted": f1_w,
-        "f1_tree": f1_tree,
-        "f1_notree": f1_notree,
+        "seg_f1": seg_f1,
         "confusion_matrix": cm,
         "n_points_evaluated": int(len(y_true)),
     }

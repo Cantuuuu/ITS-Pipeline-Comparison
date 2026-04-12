@@ -6,8 +6,9 @@ Watershed 3D sobre Watershed 2D (basado en CHM) se justifica porque:
 
 1. El Watershed 2D colapsa la información vertical y falla en bosques densos
    donde las copas se superponen en proyección pero tienen troncos distintos.
-2. FOR-instance tiene densidades ~18,236 pts/m² (Wielgosz et al. 2024,
-   SegmentAnyTree), haciendo viable el enfoque volumétrico.
+2. FOR-instance contiene nubes de alta densidad ULS (ver §3.1 del paper
+   para el rango medido sobre las colecciones empleadas), lo que hace
+   viable el enfoque volumétrico sobre vóxeles pequeños.
 3. Al evaluar si el preprocesamiento semántico aporta valor, ese efecto es
    más visible en 3D que en 2D donde el baseline ya es competitivo.
 
@@ -19,18 +20,36 @@ La única diferencia entre métodos es qué puntos se le pasan:
 Algoritmo:
   1. Voxelizar la nube en grilla 3D
   2. Calcular densidad de puntos por voxel
-  3. Suavizado gaussiano (sigma=0.5, Yang et al. 2020 IEEE JSTARS)
-  4. Detectar semillas via canopy height map 2D + peak_local_max
+  3. Suavizado gaussiano 3D del volumen de densidad
+  4. Detectar semillas sobre la envolvente superior del volumen (ver nota)
   5. Crear marcadores 3D (voxel de copa por árbol)
-  6. Watershed sobre densidad invertida
+  6. Watershed 3D sobre densidad invertida, con máscara density > 0
   7. Propagar etiquetas a puntos, filtrar segmentos pequeños
 
+NOTA IMPORTANTE — Seeding 2D sobre envolvente vs. fill 3D volumétrico:
+
+  El paso de seeding se ejecuta sobre una *envolvente superior del grid 3D*
+  (para cada columna (x, y) se toma el voxel ocupado más alto), que es
+  equivalente a un CHM derivado localmente del propio volumen y NO a un
+  raster CHM externo. El verdadero aporte de este segmentador respecto a un
+  watershed 2D clásico NO es el seeding sino el fill: el watershed opera
+  sobre el grid 3D completo con máscara volumétrica, de modo que cada punto
+  se asigna al voxel tridimensional que lo contiene — no a la proyección XY
+  de su columna. Esto separa correctamente troncos adyacentes y puntos de
+  sotobosque que caen bajo la proyección horizontal de una copa vecina,
+  cosa que un watershed 2D puro no puede hacer.
+
+  El seeding se deja en 2D a propósito: los máximos locales de densidad 3D
+  caen en los troncos y ramas gruesas de las copas (no en los ápices),
+  produciendo semillas que arruinarían la segmentación. La práctica
+  estándar ITS (Dalponte-Coomes 2016) usa envolventes tipo CHM para
+  seeding incluso cuando el fill es 3D, por la misma razón.
+
 Parámetros justificados:
-  - gaussian_sigma=0.5: Yang et al. (2020) IEEE JSTARS usan sigma=0.5 sobre
-    CHM de UAV de alta densidad. sigma=1.0 equivale a 1m en espacio real,
-    excesivo para plots con árboles separados ~2m.
-  - min_crown_radius_m: se evalúan 1.0m y 1.5m empíricamente sobre val set.
-    Chen et al. (2022) Remote Sens. recomiendan ajuste empírico por dataset.
+  - gaussian_sigma: calibrado por grid search independiente por flujo
+    sobre el split val (ver evaluation/grid_search.py).
+  - min_crown_radius_m: calibrado por grid search independiente por flujo
+    sobre el split val.
   - CHM vectorizado: numpy en lugar de loop Python O(gx×gy).
 """
 
@@ -86,7 +105,7 @@ def watershed3d(
 
     Algoritmo detallado:
       1. Voxelizar nube -> density_grid (gx, gy, gz)
-      2. Gaussian smoothing sobre el volumen (sigma=0.5, Yang et al. 2020)
+      2. Gaussian smoothing sobre el volumen
       3. Detectar semillas (una por árbol):
          a. Crear canopy height map 2D: para cada columna XY, el índice Z
             del voxel más alto con puntos (vectorizado numpy)
@@ -99,14 +118,18 @@ def watershed3d(
       7. Filtrar segmentos con < min_points_per_tree puntos
 
     Args:
-        points: (N, 3) coordenadas XYZ de los puntos a segmentar.
+        points: (N, 3) coordenadas de los puntos a segmentar. Se asume que la
+            tercera coordenada es HAG (altura sobre el suelo) y NO Z absoluto:
+            los pipelines construyen `np.column_stack([x, y, hag])` antes de
+            llamar a esta función para que la voxelización sea invariante al
+            relieve.
         voxel_size: Resolución del voxel en metros (default 0.1m).
         min_tree_height: Altura mínima para semilla (default 2.0m).
         min_points_per_tree: Mínimo de puntos por segmento (default 50).
-        gaussian_sigma: Sigma del suavizado gaussiano (default 0.5,
-            Yang et al. 2020 IEEE JSTARS).
+        gaussian_sigma: Sigma del suavizado gaussiano (default 0.5).
+            Valor calibrado por flujo mediante grid search sobre val set.
         min_crown_radius_m: Radio mínimo entre copas en metros (default 1.0m).
-            Chen et al. (2022) recomiendan ajuste empírico por dataset.
+            Valor calibrado por flujo mediante grid search sobre val set.
 
     Returns:
         instance_ids: (N,) int32. >= 1 para árboles, 0 = sin asignación.
@@ -142,9 +165,11 @@ def watershed3d(
     chm_m = chm.astype(np.float32) * voxel_size
 
     min_distance_voxels = max(1, int(min_crown_radius_m / voxel_size))
-    min_height_voxels = int(min_tree_height / voxel_size)
 
-    # peak_local_max sobre el CHM 2D
+    # peak_local_max sobre el CHM 2D: `threshold_abs=min_tree_height`
+    # (en metros) ya garantiza que las semillas retornadas correspondan a
+    # columnas con top_z * voxel_size >= min_tree_height, por lo que no es
+    # necesario un segundo filtro redundante sobre el índice de voxel.
     coords_2d = peak_local_max(
         chm_m,
         min_distance=min_distance_voxels,
@@ -155,15 +180,7 @@ def watershed3d(
     if len(coords_2d) == 0:
         return np.zeros(len(points), dtype=np.int32)
 
-    # Filtrar semillas por altura mínima
-    valid_seeds = []
-    for ix, iy in coords_2d:
-        top_z = chm[ix, iy]
-        if top_z >= min_height_voxels:
-            valid_seeds.append((ix, iy, top_z))
-
-    if not valid_seeds:
-        return np.zeros(len(points), dtype=np.int32)
+    valid_seeds = [(int(ix), int(iy), int(chm[ix, iy])) for ix, iy in coords_2d]
 
     # --- 4. Crear marcadores 3D ---
     markers = np.zeros_like(density_grid, dtype=np.int32)

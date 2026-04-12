@@ -29,7 +29,7 @@ def predict_plot(
     Aplica el RF entrenado a un plot completo.
 
     Proceso:
-      1. compute_features_for_plot() -> (N_valid, 28) con cache
+      1. compute_features_for_plot() -> (N_valid, 27) con cache
       2. rf_model.predict() y predict_proba() sobre puntos válidos
       3. Para puntos con label == -1: predicción = -1 (excluidos)
 
