@@ -10,7 +10,7 @@
 \usepackage{multirow}
 \usepackage{url}
 
-\graphicspath{{../output/figures/}}
+\graphicspath{{../assets/paper/}}
 
 \begin{document}
 
@@ -149,8 +149,8 @@ Los flujos propuestos comparten una arquitectura de dos etapas en cascada: (1)~p
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{pipeline_diagram.png}
-\caption{Arquitectura general del pipeline ITS comparado. Tres estrategias de preprocesado sem\'antico (Etapa~1) se combinan factorialmente con dos variantes de seeding del Watershed~3D (Etapa~2), produciendo cinco flujos evaluados. El Flujo~D (RF + Density, marcado con $\star$) alcanza el mejor F1 de instancia en test (0.209). Los par\'ametros del segmentador se calibran de forma independiente por flujo sobre el split val.}\label{fig:pipeline}
+\includegraphics[width=\textwidth]{fig_05_factorial_analysis.png}
+\caption{An\'alisis factorial: impacto del preprocesado sem\'antico vs estrategia de seeding. El seeding por densidad (rojo) supera consistentemente al seeding CHM cl\'asico (azul) en todos los m\'etodos. El cambio de seeding produce mejoras (+47--74\%) mayores que el cambio de preprocesado sem\'antico (+27\%), confirmando que el segmentador de instancias es el cuello de botella principal.}\label{fig:pipeline}
 \end{figure}
 
 Los par\'ametros del segmentador se calibran de forma independiente por flujo mediante grid search sobre el split val maximizando el F1 de instancia (umbral IoU~3D~$\geq 0.5$). Esta calibraci\'on garantiza que las diferencias en rendimiento reflejen el efecto del preprocesado y la estrategia de seeding, y no diferencias en la configuraci\'on del segmentador.
@@ -258,11 +258,11 @@ La segmentaci\'on sem\'antica de ambos clasificadores es excelente (tree~IoU~$>$
 
 La Fig.~\ref{fig:semantic} muestra la comparaci\'on cualitativa de las predicciones sem\'anticas de RF y PointNet++ sobre plots representativos. Ambos clasificadores logran tree~IoU~$>$~0.93 en todos los sitios; RF supera a PointNet++ de forma consistente, con ventaja m\'as marcada en RMIT (0.970 vs.\ 0.940) y NIBIO (0.995 vs.\ 0.989).
 
-%% --- FIGURA 4: Semantic comparison ---
+%% --- FIGURA: Semantic quality heatmap ---
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{02_semantic_results/semantic_comparison_plot_1.png}
-\caption{Comparaci\'on de segmentaci\'on sem\'antica (RF vs.\ PointNet++ MSG) sobre un plot representativo. Los colores indican la clase predicha (verde: \'arbol, gris: no-\'arbol); los errores de clasificaci\'on aparecen resaltados. RF produce menos falsos positivos aislados que PointNet++, lo que reduce la generaci\'on de semillas esp\'ureas en el Watershed~3D.}\label{fig:semantic}
+\includegraphics[width=\textwidth]{fig_08_semantic_heatmap.png}
+\caption{Calidad de segmentaci\'on sem\'antica (mIoU) por tipo de bosque y m\'etodo. Ambos clasificadores (RF y PointNet++) alcanzan mIoU~$>$~0.97 en todos los sitios, sin diferencias significativas ($<$~1~pp). Esta calidad sem\'antica casi id\'entica no se traduce proporcionalmente en rendimiento de instancia, evidenciando el desacoplamiento entre ambas tareas.}\label{fig:semantic}
 \end{figure}
 
 La Fig.~\ref{fig:f1site} muestra el F1 de instancia por sitio para los cinco flujos. Los patrones m\'as relevantes son: (i)~CULS es el \'unico sitio con F1~$>$~0.5, gracias a copas bien separadas; (ii)~NIBIO (50\% del test set) es el caso m\'as desafiante; (iii)~el seeding por densidad mejora consistentemente en todos los sitios, con la ganancia m\'as notable en RMIT (RF: de 0.061 a 0.213) y TUWIEN (RF: de 0.000 a 0.136), donde el seeding CHM fallaba completamente.
@@ -270,7 +270,7 @@ La Fig.~\ref{fig:f1site} muestra el F1 de instancia por sitio para los cinco flu
 %% --- FIGURA 3: F1 by institution ---
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{04_metrics/f1_by_institution.png}
+\includegraphics[width=\textwidth]{fig_02_f1_by_institution.png}
 \caption{F1 de instancia (IoU~3D~$\geq 0.5$) por sitio y flujo sobre el conjunto de test. El seeding por densidad (Flujos D y E, trama rayada) supera consistentemente al seeding CHM (Flujos B y C) en todos los sitios. CULS presenta F1 elevado por sus copas bien diferenciadas; NIBIO es el caso m\'as desafiante para todos los m\'etodos.}\label{fig:f1site}
 \end{figure}
 
@@ -283,12 +283,12 @@ La Fig.~\ref{fig:instances} ilustra cualitativamente los resultados de instancia
 \begin{figure}[t]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{03_instance_results/instance_comparison_culs_plot1.png}
+  \includegraphics[width=\textwidth]{fig_07_confusion_matrices.png}
   \caption{CULS --- copas bien separadas (F1 Flujo~D: 0.629)}
 \end{subfigure}
 \hfill
 \begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{03_instance_results/instance_comparison_nibio_plot2.png}
+  \includegraphics[width=\textwidth]{fig_09_instance_heatmap.png}
   \caption{NIBIO --- canopia uniforme densa (F1 Flujo~D: 0.151)}
 \end{subfigure}
 \caption{Segmentaci\'on de instancias con el Flujo~D (RF + Density seeding). Cada color representa un \'arbol predicho; los \'arboles GT se indican con contorno negro. CULS ejemplifica el caso favorable (copas diferenciadas); NIBIO ilustra el l\'imite del pipeline ante canopias de altura uniforme.}\label{fig:instances}
@@ -315,7 +315,7 @@ El an\'alisis factorial (Tabla~\ref{tab:factorial} y Fig.~\ref{fig:decoupling}) 
 %% --- FIGURA 5: Semantic vs Instance decoupling ---
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{04_metrics/semantic_vs_instance_decoupling.png}
+\includegraphics[width=\textwidth]{fig_03_semantic_instance_decoupling.png}
 \caption{Desacoplamiento entre calidad sem\'antica y calidad de instancia. Aunque ambos clasificadores alcanzan tree~IoU~$>$~0.97 (diferencia~$<$~1\,pp), el F1 de instancia difiere por un factor~$2.5\times$ entre RF y PointNet++ con seeding CHM (0.142 vs.\ 0.082). El seeding por densidad (flechas) comprime esta brecha pero no la elimina. El segmentador, no el clasificador sem\'antico, es el factor dominante del pipeline.}\label{fig:decoupling}
 \end{figure}
 
