@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering
+\caption{Instance segmentation results on test set}
+\begin{tabular}{l c c c c c c c c}
+\hline
+Method & GT & Pred & Prec & Rec & F1 & Cov & IoU$_{\text{match}}$ & OverSeg & UnderSeg \\
+\hline
+baseline & 323 & 285 & 0.138 & 0.133 & 0.112 & 0.133 & 0.500 & 0.644 & 0.867 \\
+rf & 323 & 100 & 0.394 & 0.110 & 0.142 & 0.110 & 0.652 & 0.176 & 0.890 \\
+pointnet2 & 323 & 71 & 0.172 & 0.060 & 0.082 & 0.060 & 0.313 & 0.158 & 0.940 \\
+rf_density & 323 & 117 & 0.418 & 0.150 & 0.209 & 0.150 & 0.672 & 0.200 & 0.850 \\
+pointnet2_density & 323 & 163 & 0.209 & 0.118 & 0.143 & 0.118 & 0.696 & 0.398 & 0.882 \\
+\hline
+\end{tabular}
+\end{table}

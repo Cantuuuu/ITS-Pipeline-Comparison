@@ -34,7 +34,6 @@ output/
 !output/figures/
 figures/
 logs/
-results/
 *.log
 
 # Model checkpoints & predictions (large files)
