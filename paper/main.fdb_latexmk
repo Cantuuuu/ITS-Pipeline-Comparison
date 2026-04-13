@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1776048640.71754 "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" "main.pdf" "main" 1776048642.21692 0
+["pdflatex"] 1776048791.24483 "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" "main.pdf" "main" 1776048792.69123 0
   "../assets/paper/fig_02_f1_by_institution.png" 1776040543.79733 55998 2c2e6f84d1e1d5edd8ae8316a6f84033 ""
   "../assets/paper/fig_03_semantic_instance_decoupling.png" 1776040543.79804 46845 fd5b0b0d736b95a5bebb272e044da934 ""
   "../assets/paper/fig_05_factorial_analysis.png" 1776040543.79975 57105 b8216a3d2fb9909a7bc870832cbe5dcf ""
@@ -8,7 +8,7 @@
   "../assets/paper/fig_v3_semantic_overlay.png" 1776040543.80871 211825 c18bfa3b06a833942c237afb7c0a2eea ""
   "../assets/paper/fig_v4_gridsearch_landscape.png" 1776040543.80957 50046 3d18bb2162d37b61d2e9172fa876b8d5 ""
   "../assets/paper/fig_v5_vertical_profile.png" 1776040543.81173 448178 d2542141cf8d1a27045bde9c348b191c ""
-  "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" 1776048639.03963 28183 baf8116df71bc968a2752aee2b6d9683 ""
+  "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" 1776048790.59001 28183 e86043db5585b18dbe246d6a47d0ec62 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -103,8 +103,8 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1770333101 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "main.aux" 1776048642.14651 9095 86e9fce060782647183bd61ec5c277f4 "pdflatex"
-  "main.tex" 1776048639.03963 28183 baf8116df71bc968a2752aee2b6d9683 ""
+  "main.aux" 1776048792.62216 9094 b71918071168fa8328375880ab0ea5ce "pdflatex"
+  "main.tex" 1776048790.59001 28183 e86043db5585b18dbe246d6a47d0ec62 ""
   (generated)
   "main.aux"
   "main.log"
