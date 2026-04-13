@@ -47,8 +47,77 @@ M_COLORS = {
     "pointnet2_density": "#C0392B",
 }
 
-# Paleta discreta para instancias (hasta 30 árboles)
-CMAP_INST = plt.cm.get_cmap("tab20b", 25)
+# Paleta discreta brillante para instancias — colores saturados, fácilmente distinguibles
+_BRIGHT_COLORS = [
+    "#E6194B","#3CB44B","#4363D8","#F58231","#911EB4",
+    "#42D4F4","#F032E6","#BFEF45","#FABED4","#469990",
+    "#DCBEFF","#9A6324","#FFFAC8","#800000","#AAFFC3",
+    "#808000","#FFD8B1","#000075","#A9A9A9","#ffffff",
+    "#FF6347","#00CED1","#FFD700","#ADFF2F","#FF69B4",
+    "#20B2AA","#FF4500","#DA70D6","#7FFF00","#DC143C",
+]
+
+def _inst_color(i):
+    """Devuelve color brillante y distinto para el índice de instancia i."""
+    return _BRIGHT_COLORS[i % len(_BRIGHT_COLORS)]
+
+
+def _render_topview(x, y, instance_ids, res=0.25):
+    """
+    Crea una imagen 2D top-view coloreada por instancia.
+    Cada píxel toma el color de la instancia con más puntos en esa celda.
+    Fondo (id=0) → gris claro.  Retorna (img_rgba, extent).
+    """
+    x_min, x_max = x.min(), x.max()
+    y_min, y_max = y.min(), y.max()
+    nx = max(1, int(np.ceil((x_max - x_min) / res)))
+    ny = max(1, int(np.ceil((y_max - y_min) / res)))
+
+    # Índice de celda para cada punto
+    xi = np.clip(((x - x_min) / res).astype(int), 0, nx - 1)
+    yi = np.clip(((y - y_min) / res).astype(int), 0, ny - 1)
+    flat = yi * nx + xi
+
+    unique_ids = np.unique(instance_ids)
+    unique_ids = unique_ids[unique_ids > 0]
+
+    # Construye grid de conteos por (celda, instancia) — instancias ordenadas por tamaño desc
+    sizes = [(pid, int((instance_ids == pid).sum())) for pid in unique_ids]
+    sizes.sort(key=lambda s: -s[1])
+
+    # Imagen RGBA: empieza en gris claro (fondo)
+    BG = np.array([0.88, 0.88, 0.88, 1.0])
+    img = np.tile(BG, (ny, nx, 1))
+
+    # Para cada instancia (de mayor a menor), pintar sobre la imagen
+    # Usamos un grid de "quién ganó" inicializado en -1
+    winner = np.full(ny * nx, -1, dtype=int)
+    win_count = np.zeros(ny * nx, dtype=int)
+
+    for rank, (pid, _) in enumerate(sizes):
+        mask = instance_ids == pid
+        cells = flat[mask]
+        # Contar puntos de este pid por celda
+        cell_ids, counts = np.unique(cells, return_counts=True)
+        update = counts > win_count[cell_ids]
+        winner[cell_ids[update]] = rank
+        win_count[cell_ids[update]] = counts[update]
+
+    # Pintar imagen
+    for rank, (pid, _) in enumerate(sizes):
+        color_hex = _inst_color(rank)
+        r = int(color_hex[1:3], 16) / 255
+        g = int(color_hex[3:5], 16) / 255
+        b = int(color_hex[5:7], 16) / 255
+        cells_won = np.where(winner == rank)[0]
+        if len(cells_won) == 0:
+            continue
+        row = cells_won // nx
+        col = cells_won % nx
+        img[row, col] = [r, g, b, 1.0]
+
+    extent = [x_min, x_max, y_min, y_max]
+    return img, extent
 
 def load_npz(method, plot_name):
     """Carga predictions/method/plot_name_instances.npz desde ZIP."""
@@ -77,28 +146,23 @@ if HAS_LASPY:
     gt_ids = np.array(las["treeID"]).astype(int)
 
     show_methods = ["baseline", "rf", "rf_density", "pointnet2_density"]
-    fig, axes = plt.subplots(1, 5, figsize=(18, 4.2), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 5, figsize=(18, 4.2))
     fig.suptitle("Instance Segmentation — CULS (Temperate Conifer, Best-Case Forest)",
                  fontsize=12, fontweight="bold", y=1.01)
 
     # Panel GT
     ax = axes[0]
+    img_gt, ext = _render_topview(x_all, y_all, gt_ids, res=0.2)
+    ax.imshow(img_gt, extent=ext, origin="lower", aspect="equal", interpolation="nearest")
     unique_gt = [g for g in np.unique(gt_ids) if g > 0]
-    for i, gid in enumerate(unique_gt):
-        mask = gt_ids == gid
-        ax.scatter(x_all[mask], y_all[mask], s=0.15,
-                   color=CMAP_INST(i % 25), rasterized=True)
-    mask0 = gt_ids == 0
-    ax.scatter(x_all[mask0], y_all[mask0], s=0.05, color="#CCCCCC",
-               alpha=0.3, rasterized=True)
     ax.set_title("Ground Truth", fontweight="bold")
-    ax.set_aspect("equal")
     ax.axis("off")
     ax.text(0.02, 0.02, f"{len(unique_gt)} trees", transform=ax.transAxes,
             fontsize=8, color="black", va="bottom",
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8))
 
     # Paneles predicciones
+    df = pd.read_csv(RESULTS)
     for ax, method in zip(axes[1:], show_methods):
         data = load_npz(method, "CULS__plot_2_annotated")
         if data is None:
@@ -109,20 +173,9 @@ if HAS_LASPY:
         pred_ids = data["instance_ids"]
         unique_pred = [p for p in np.unique(pred_ids) if p > 0]
 
-        # Sort by size descending so biggest trees dominate color
-        sizes = [(pid, (pred_ids == pid).sum()) for pid in unique_pred]
-        sizes.sort(key=lambda s: -s[1])
+        img_pred, ext = _render_topview(x_all, y_all, pred_ids, res=0.2)
+        ax.imshow(img_pred, extent=ext, origin="lower", aspect="equal", interpolation="nearest")
 
-        for i, (pid, _) in enumerate(sizes):
-            mask = pred_ids == pid
-            ax.scatter(x_all[mask], y_all[mask], s=0.15,
-                       color=CMAP_INST(i % 25), rasterized=True)
-        mask0 = pred_ids == 0
-        ax.scatter(x_all[mask0], y_all[mask0], s=0.05,
-                   color="#CCCCCC", alpha=0.3, rasterized=True)
-
-        # Obtener F1 de CSV
-        df = pd.read_csv(RESULTS)
         row = df[(df["method"] == method) &
                  (df["plot"].str.contains("CULS__plot_2"))]
         f1 = row["f1"].values[0] if len(row) else 0.0
@@ -131,7 +184,6 @@ if HAS_LASPY:
 
         ax.set_title(M_LABELS[method], fontweight="bold",
                      color=M_COLORS[method])
-        ax.set_aspect("equal")
         ax.axis("off")
         ax.text(0.02, 0.02,
                 f"P={prec:.2f}  R={rec:.2f}\nF1={f1:.3f}  n={len(unique_pred)}",
@@ -157,26 +209,21 @@ if HAS_LASPY:
     gt_ids = np.array(las["treeID"]).astype(int)
 
     show_methods = ["baseline", "rf", "rf_density", "pointnet2_density"]
-    fig, axes = plt.subplots(1, 5, figsize=(18, 4.2), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 5, figsize=(18, 4.2))
     fig.suptitle("Instance Segmentation — NIBIO (Boreal Conifer, Dense Canopy)",
                  fontsize=12, fontweight="bold", y=1.01)
 
     ax = axes[0]
     unique_gt = [g for g in np.unique(gt_ids) if g > 0]
-    for i, gid in enumerate(unique_gt):
-        mask = gt_ids == gid
-        ax.scatter(x_all[mask], y_all[mask], s=0.1,
-                   color=CMAP_INST(i % 25), rasterized=True)
-    mask0 = gt_ids == 0
-    ax.scatter(x_all[mask0], y_all[mask0], s=0.04,
-               color="#CCCCCC", alpha=0.2, rasterized=True)
+    img_gt, ext = _render_topview(x_all, y_all, gt_ids, res=0.2)
+    ax.imshow(img_gt, extent=ext, origin="lower", aspect="equal", interpolation="nearest")
     ax.set_title("Ground Truth", fontweight="bold")
-    ax.set_aspect("equal")
     ax.axis("off")
     ax.text(0.02, 0.02, f"{len(unique_gt)} trees", transform=ax.transAxes,
             fontsize=8, va="bottom",
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8))
 
+    df = pd.read_csv(RESULTS)
     for ax, method in zip(axes[1:], show_methods):
         data = load_npz(method, "NIBIO__plot_17_annotated")
         if data is None:
@@ -185,17 +232,10 @@ if HAS_LASPY:
             continue
         pred_ids = data["instance_ids"]
         unique_pred = [p for p in np.unique(pred_ids) if p > 0]
-        sizes = [(pid, (pred_ids == pid).sum()) for pid in unique_pred]
-        sizes.sort(key=lambda s: -s[1])
-        for i, (pid, _) in enumerate(sizes):
-            mask = pred_ids == pid
-            ax.scatter(x_all[mask], y_all[mask], s=0.1,
-                       color=CMAP_INST(i % 25), rasterized=True)
-        mask0 = pred_ids == 0
-        ax.scatter(x_all[mask0], y_all[mask0], s=0.04,
-                   color="#CCCCCC", alpha=0.2, rasterized=True)
 
-        df = pd.read_csv(RESULTS)
+        img_pred, ext = _render_topview(x_all, y_all, pred_ids, res=0.2)
+        ax.imshow(img_pred, extent=ext, origin="lower", aspect="equal", interpolation="nearest")
+
         row = df[(df["method"] == method) &
                  (df["plot"].str.contains("NIBIO__plot_17"))]
         f1 = row["f1"].values[0] if len(row) else 0.0
@@ -204,7 +244,6 @@ if HAS_LASPY:
 
         ax.set_title(M_LABELS[method], fontweight="bold",
                      color=M_COLORS[method])
-        ax.set_aspect("equal")
         ax.axis("off")
         ax.text(0.02, 0.02,
                 f"P={prec:.2f}  R={rec:.2f}\nF1={f1:.3f}  n={len(unique_pred)}",
@@ -377,10 +416,10 @@ if HAS_LASPY:
         mask = mask_band & (gt_ids == gid)
         if mask.sum() > 0:
             ax.scatter(x_all[mask], z_all[mask], s=0.3,
-                       color=CMAP_INST(i % 25), rasterized=True)
+                       color=_inst_color(i), rasterized=True)
     mask0 = mask_band & (gt_ids == 0)
     ax.scatter(x_all[mask0], z_all[mask0], s=0.1,
-               color="#AAAAAA", alpha=0.3, rasterized=True)
+               color="#AAAAAA", alpha=0.15, rasterized=True)
     ax.set_title("Ground Truth", fontweight="bold")
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Z (m)")
@@ -398,10 +437,10 @@ if HAS_LASPY:
             mask = mask_band & (pred_ids == pid)
             if mask.sum() > 0:
                 ax.scatter(x_all[mask], z_all[mask], s=0.3,
-                           color=CMAP_INST(i % 25), rasterized=True)
+                           color=_inst_color(i), rasterized=True)
         mask0 = mask_band & (pred_ids == 0)
         ax.scatter(x_all[mask0], z_all[mask0], s=0.1,
-                   color="#AAAAAA", alpha=0.3, rasterized=True)
+                   color="#AAAAAA", alpha=0.15, rasterized=True)
         df = pd.read_csv(RESULTS)
         row = df[(df["method"] == method) &
                  (df["plot"].str.contains("CULS__plot_2"))]
