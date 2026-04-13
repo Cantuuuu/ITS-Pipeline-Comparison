@@ -70,7 +70,7 @@ In conventional ALS (${<}10$~pts/m$^2$), the dominant ITS approach detects CHM l
 
 \subsection{Semantic segmentation of forest point clouds}
 
-Classical methods use handcrafted geometric features with Random Forest~\cite{breiman2001} or SVM~\cite{weinmann2015,weinmann2017}, while deep learning methods (PointNet~\cite{qi2016}, PointNet++~\cite{qi2017}) learn features end-to-end. PointNet++ has shown promising ULS results with height-normalized features~\cite{wang2023}, but semantic classification is predominantly evaluated as a final task; its role as ITS preprocessing remains understudied.
+Classical methods use handcrafted geometric features with Random Forest~\cite{breiman2001} or SVM~\cite{weinmann2015,weinmann2017}, while deep learning methods (PointNet~\cite{qi2016}, PointNet++~\cite{qi2017}) learn features end-to-end. PointNet++ has shown promising ULS results with height-normalized features, but semantic classification is predominantly evaluated as a final task; its role as ITS preprocessing remains understudied.
 
 \subsection{Benchmarks}
 
@@ -132,7 +132,7 @@ Cada punto se representa mediante 27 features geom\'etricas: 8 descriptores eige
 
 \subsection{Flujo~C --- PointNet++ MSG}
 
-Se emplea PointNet++ MSG~\cite{qi2017} con cuatro m\'odulos Set Abstraction y cuatro Feature Propagation~\cite{yan2019pointnet2pytorch}. La entrada son 5 dimensiones por punto ($XYZ$ + HAG\_norm + intensidad), garantizando equivalencia de informaci\'on con el Flujo~B~\cite{wang2023}. La red se entrena durante 100 \'epocas con submuestreos de $8\,192$ puntos. En inferencia se realizan m\'ultiples pasadas con promediado de probabilidades; los puntos residuales se etiquetan por interpolaci\'on KNN ($k=3$).
+Se emplea PointNet++ MSG~\cite{qi2017} con cuatro m\'odulos Set Abstraction y cuatro Feature Propagation~\cite{yan2019pointnet2pytorch}. La entrada son 5 dimensiones por punto ($XYZ$ + HAG\_norm + intensidad), garantizando equivalencia de informaci\'on con el Flujo~B. La red se entrena durante 100 \'epocas con submuestreos de $8\,192$ puntos. En inferencia se realizan m\'ultiples pasadas con promediado de probabilidades; los puntos residuales se etiquetan por interpolaci\'on KNN ($k=3$).
 
 \subsection{Segmentador de instancias --- Watershed 3D volum\'etrico}\label{sec:watershed}
 
@@ -302,7 +302,7 @@ PointNet++ muestra ca\'ida severa en RMIT y TUWIEN (F1\,=\,0.000 con CHM), debid
 
 \subsection{Limitaciones}
 
-El conjunto de test comprende 11~plots y 323~\'arboles GT, lo que introduce varianza en estimaciones por sitio (especialmente CULS con 20~\'arboles y TUWIEN con 35). PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; una b\'usqueda exhaustiva podr\'ia mejorar su rendimiento. Las conclusiones sobre el cuello de botella son espec\'ificas al Watershed~3D volum\'etrico; otros segmentadores (ForAINet~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024}) podr\'ian mostrar una relaci\'on diferente. Los resultados son espec\'ificos a datos ULS ($454$--$10\,156$~pts/m$^2$); la transferencia a ALS convencional no est\'a garantizada.
+El conjunto de test comprende 11~plots y 323~\'arboles GT, lo que introduce varianza en estimaciones por sitio (especialmente CULS con 20~\'arboles y TUWIEN con 35). PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; una b\'usqueda exhaustiva podr\'ia mejorar su rendimiento. Las conclusiones sobre el cuello de botella son espec\'ificas al Watershed~3D volum\'etrico; otros segmentadores (TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024}) podr\'ian mostrar una relaci\'on diferente. Los resultados son espec\'ificos a datos ULS ($454$--$10\,156$~pts/m$^2$); la transferencia a ALS convencional no est\'a garantizada.
 
 %% ================================================================
 %%  8. CONCLUSIONES
@@ -311,7 +311,7 @@ El conjunto de test comprende 11~plots y 323~\'arboles GT, lo que introduce vari
 
 Mediante un dise\~no factorial $3 \times 2$ sobre FOR-instance~V1, demostramos que: (1)~el segmentador de instancias, no el preprocesado sem\'antico, es el cuello de botella principal del pipeline ITS; (2)~Random Forest con features geom\'etricas supera a PointNet++ MSG en todas las combinaciones evaluadas, sin requerir GPU; y (3)~el seeding por densidad de copa mejora consistentemente al seeding CHM (+47\% para RF, +74\% para PointNet++), siendo especialmente efectivo en bosques densos de altura uniforme.
 
-La combinaci\'on RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una l\'inea base robusta y eficiente. La brecha entre calidad sem\'antica y calidad de instancia sugiere que las mejoras m\'as impactantes en ITS vendr\'an de segmentadores capaces de separar copas adyacentes en canopias densas --- mediante priors sobre geometr\'ia de copa, segmentadores end-to-end, o mejores estrategias de seeding. Trabajo futuro incluye comparaci\'on con ForAINet~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensi\'on a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad seg\'un la variabilidad local de altura. El c\'odigo fuente y los scripts de reproducci\'on est\'an disponibles en \url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}.
+La combinaci\'on RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una l\'inea base robusta y eficiente. La brecha entre calidad sem\'antica y calidad de instancia sugiere que las mejoras m\'as impactantes en ITS vendr\'an de segmentadores capaces de separar copas adyacentes en canopias densas --- mediante priors sobre geometr\'ia de copa, segmentadores end-to-end, o mejores estrategias de seeding. Trabajo futuro incluye comparaci\'on con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensi\'on a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad seg\'un la variabilidad local de altura. El c\'odigo fuente y los scripts de reproducci\'on est\'an disponibles en \url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}.
 
 %% ================================================================
 %%  REFERENCIAS
@@ -346,8 +346,9 @@ Machine Learning \textbf{45}(1), 5--32 (2001)
 
 \bibitem{weinstein2021}
 Weinstein, B.G., Marconi, S., Bohlman, S., Zare, A., White, E.:
-A benchmark dataset for individual tree crown delineation in co-registered airborne RGB, LiDAR and hyperspectral imagery.
-Methods in Ecology and Evolution \textbf{12}(10), 1847--1856 (2021)
+A benchmark dataset for canopy crown detection and delineation in co-registered airborne RGB, LiDAR and hyperspectral imagery from the National Ecological Observation Network.
+PLOS Computational Biology \textbf{17}(7), e1009180 (2021).
+DOI: 10.1371/journal.pcbi.1009180
 
 \bibitem{silva2016}
 Silva, C.A., Hudak, A.T., Vierling, L.A., et al.:
@@ -366,9 +367,9 @@ Methods in Ecology and Evolution \textbf{7}(10), 1236--1245 (2016)
 
 \bibitem{xiang2025}
 Xiang, B., et al.:
-FOR-instanceV2: A large-scale benchmark for 3D forest point cloud instance segmentation.
-(2025)
-% [COMPLETAR: venue y detalles de publicaci\'on]
+ForestFormer3D: A unified framework for end-to-end segmentation of forest LiDAR 3D point clouds.
+In: IEEE/CVF International Conference on Computer Vision (ICCV), Honolulu, Hawaii (2025).
+arXiv:2506.16991
 
 \bibitem{weinmann2015}
 Weinmann, M., Jutzi, B., Hinz, S., Mallet, C.:
@@ -383,21 +384,16 @@ ISPRS Annals of the Photogrammetry, Remote Sensing and Spatial Information Scien
 
 \bibitem{henrich2024}
 Henrich, J., et al.:
-ForAINet: Deep learning for forest point cloud semantic and instance segmentation.
-(2024)
-% [VERIFICAR venue y detalles antes de submission]
+TreeLearn: A deep learning method for segmenting individual trees from ground-based LiDAR forest point clouds.
+Ecological Informatics \textbf{84}, 102888 (2024).
+DOI: 10.1016/j.ecoinf.2024.102888. arXiv:2309.08471
 
 \bibitem{wielgosz2024}
-Wielgosz, M., et al.:
+Wielgosz, M., Puliti, S., Xiang, B., Schindler, K., Astrup, R.:
 SegmentAnyTree: A sensor and platform agnostic deep learning model for tree segmentation using laser scanning data.
-(2024)
-% [VERIFICAR venue y detalles antes de submission]
+Remote Sensing of Environment \textbf{313}, 114367 (2024).
+DOI: 10.1016/j.rse.2024.114367. arXiv:2401.15739
 
-\bibitem{wang2023}
-Wang, D., et al.:
-Semantic segmentation of forest point clouds: Combining deep learning with height-normalized intensity features.
-Remote Sensing \textbf{15}(8) (2023)
-% [VERIFICAR cita exacta antes de submission]
 
 \end{thebibliography}
 
