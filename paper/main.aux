@@ -30,32 +30,32 @@
 \@writefile{toc}{\contentsline {section}{\numberline {3}Dataset}{3}{}\protected@file@percent }
 \newlabel{sec:dataset}{{3}{3}{}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}FOR-instance}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Colecciones del dataset FOR-instance V1 utilizadas en este trabajo.}}{3}{}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:collections}{{1}{3}{}{table.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Splits y reproducibilidad}{3}{}\protected@file@percent }
 \newlabel{sec:splits}{{3.2}{3}{}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Metodolog\'ia}{3}{}\protected@file@percent }
+\newlabel{sec:method}{{4}{3}{}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Visi\'on general del pipeline}{3}{}\protected@file@percent }
 \citation{weinmann2015,weinmann2017}
 \citation{qi2017}
 \citation{yan2019pointnet2pytorch}
 \citation{wang2023}
 \citation{dalponte2016}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Colecciones del dataset FOR-instance V1 utilizadas en este trabajo.}}{4}{}\protected@file@percent }
-\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{tab:collections}{{1}{4}{}{table.1}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Metodolog\'ia}{4}{}\protected@file@percent }
-\newlabel{sec:method}{{4}{4}{}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Visi\'on general del pipeline}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces An\'alisis factorial: el seeding por densidad (rojo) supera al CHM (azul) en todos los m\'etodos (+47--74\%), con mejora mayor que el cambio de preprocesado (+27\%).}}{4}{}\protected@file@percent }
+\newlabel{fig:pipeline}{{1}{4}{}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Flujo~A --- Sin preprocesado (baseline)}{4}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Flujo~B --- Random Forest sobre features geom\'etricas}{4}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Flujo~C --- PointNet++ MSG}{4}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces An\'alisis factorial: el seeding por densidad (rojo) supera al CHM (azul) en todos los m\'etodos (+47--74\%), con mejora mayor que el cambio de preprocesado (+27\%).}}{5}{}\protected@file@percent }
-\newlabel{fig:pipeline}{{1}{5}{}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Segmentador de instancias --- Watershed 3D volum\'etrico}{5}{}\protected@file@percent }
 \newlabel{sec:watershed}{{4.5}{5}{}{subsection.4.5}{}}
 \@writefile{toc}{\contentsline {paragraph}{Variante CHM (Flujos A, B, C).}{5}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Variante Density (Flujos D, E).}{5}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Calibraci\'on.}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Par\'ametros \'optimos del Watershed~3D por flujo (grid search sobre val, F1 inst.\ IoU~3D~$\geq 0.5$).}}{5}{}\protected@file@percent }
+\newlabel{tab:grid-search}{{2}{5}{}{table.2}{}}
 \citation{henrich2024,wielgosz2024}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Par\'ametros \'optimos del Watershed~3D por flujo (grid search sobre val, F1 inst.\ IoU~3D~$\geq 0.5$).}}{6}{}\protected@file@percent }
-\newlabel{tab:grid-search}{{2}{6}{}{table.2}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Paisaje del grid search para el Flujo~D (RF + Density). Barras rojas: valor \'optimo. El radio m\'inimo de copa (2.0\,m) es el par\'ametro m\'as determinante.}}{6}{}\protected@file@percent }
 \newlabel{fig:gridsearch}{{2}{6}{}{figure.2}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Protocolo de Evaluaci\'on}{6}{}\protected@file@percent }
@@ -63,44 +63,44 @@
 \@writefile{toc}{\contentsline {section}{\numberline {6}Resultados}{6}{}\protected@file@percent }
 \newlabel{sec:results}{{6}{6}{}{section.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Resultados agregados}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Resultados por sitio}{6}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Resultados agregados (test, IoU~3D~$\geq 0.5$, promedio sobre 11~plots).}}{7}{}\protected@file@percent }
 \newlabel{tab:results-agg}{{3}{7}{}{table.3}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Clasificaci\'on sem\'antica sobre CULS~2. Verde: \'arbol correcto; rojo: FP; naranja: FN. RF concentra errores en bordes de copa; PointNet++ produce FP aislados en suelo.}}{7}{}\protected@file@percent }
 \newlabel{fig:semantic}{{3}{7}{}{figure.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Resultados por sitio}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Visualizaci\'on de segmentaci\'on de instancias}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}An\'alisis factorial: preprocesado $\times $ seeding}{7}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces F1 de instancia por tipo de bosque. El Flujo~D (RF + Density, rojo) domina en todos los sitios excepto CULS (F1\,=\,0.811 con Flujo~B).}}{8}{}\protected@file@percent }
 \newlabel{fig:f1site}{{4}{8}{}{figure.4}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Vista superior en CULS~2. El Flujo~D logra la mejor separaci\'on (F1\,=\,0.629); el CHM tiende a fusionar copas adyacentes.}}{8}{}\protected@file@percent }
 \newlabel{fig:topculs}{{5}{8}{}{figure.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Visualizaci\'on de segmentaci\'on de instancias}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}An\'alisis factorial: preprocesado $\times $ seeding}{8}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Vista superior en NIBIO~17 (boreal denso). Under-segmentation severo en todos los m\'etodos; F1 m\'aximo 0.256 con Flujo~D.}}{9}{}\protected@file@percent }
-\newlabel{fig:topnibio}{{6}{9}{}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Vista superior en NIBIO~17 (boreal denso). Under-segmentation severo en todos los m\'etodos; F1 m\'aximo 0.256 con Flujo~D.}}{8}{}\protected@file@percent }
+\newlabel{fig:topnibio}{{6}{8}{}{figure.6}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces F1 de instancia (test) en el dise\~no factorial. $\Delta $: mejora relativa del seeding Density sobre CHM.}}{9}{}\protected@file@percent }
 \newlabel{tab:factorial}{{4}{9}{}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Desacoplamiento sem\'antico-instancia. Tree~IoU~$>$~0.97 para ambos clasificadores, pero F1 inst.\ difiere $2.5\times $ (RF vs.\ PN++ con CHM). El segmentador es el factor dominante.}}{9}{}\protected@file@percent }
+\newlabel{fig:decoupling}{{7}{9}{}{figure.7}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Importancia de features --- Random Forest}{9}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Desacoplamiento sem\'antico-instancia. Tree~IoU~$>$~0.97 para ambos clasificadores, pero F1 inst.\ difiere $2.5\times $ (RF vs.\ PN++ con CHM). El segmentador es el factor dominante.}}{10}{}\protected@file@percent }
-\newlabel{fig:decoupling}{{7}{10}{}{figure.7}{}}
+\citation{henrich2024}
+\citation{wielgosz2024}
 \@writefile{toc}{\contentsline {section}{\numberline {7}Discusi\'on}{10}{}\protected@file@percent }
 \newlabel{sec:discussion}{{7}{10}{}{section.7}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {7.1}El segmentador como cuello de botella}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Perfil vertical (7\,m) en CULS~Plot~2. El Flujo~D (centro) separa correctamente los \'arboles usando fill volum\'etrico; PointNet++ + CHM (derecha) confunde troncos compartidos.}}{10}{}\protected@file@percent }
+\newlabel{fig:vprofile}{{8}{10}{}{figure.8}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {7.2}RF vs.\ PointNet++: viabilidad sin GPU y generalizaci\'on}{10}{}\protected@file@percent }
 \citation{henrich2024}
 \citation{wielgosz2024}
-\citation{henrich2024}
-\citation{wielgosz2024}
 \citation{xiang2025}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Perfil vertical (7\,m) en CULS~Plot~2. El Flujo~D (centro) separa correctamente los \'arboles usando fill volum\'etrico; PointNet++ + CHM (derecha) confunde troncos compartidos.}}{11}{}\protected@file@percent }
-\newlabel{fig:vprofile}{{8}{11}{}{figure.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Limitaciones}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusiones}{11}{}\protected@file@percent }
-\newlabel{sec:conclusions}{{8}{11}{}{section.8}{}}
 \bibcite{puliti2023}{1}
 \bibcite{qi2017}{2}
 \bibcite{qi2016}{3}
 \bibcite{yan2019pointnet2pytorch}{4}
 \bibcite{breiman2001}{5}
 \bibcite{weinstein2021}{6}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Limitaciones}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusiones}{11}{}\protected@file@percent }
+\newlabel{sec:conclusions}{{8}{11}{}{section.8}{}}
 \bibcite{silva2016}{7}
 \bibcite{popescu2002}{8}
 \bibcite{dalponte2016}{9}
