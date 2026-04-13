@@ -10,6 +10,7 @@
 \usepackage{multirow}
 \usepackage{url}
 \usepackage[section]{placeins}
+\usepackage{float}
 
 \graphicspath{{../assets/paper/}}
 
@@ -84,7 +85,7 @@ FOR-instance~V1~\cite{puliti2023} assembles ULS plots from five forest types acr
 
 FOR-instance~V1~\cite{puliti2023} es un benchmark ULS con anotaciones sem\'anticas e de instancias a nivel de punto. Utilizamos cinco de las seis colecciones (Tabla~\ref{tab:collections}), excluyendo NIBIO2 por sobre-representar el bosque boreal noruego, lo que sesgar\'ia las m\'etricas agregadas. Las densidades var\'ian entre $454$ y $10\,156$~pts/m$^2$ (mediana por colecci\'on: RMIT~$473$, TUWIEN~$1\,406$, CULS~$2\,510$, SCION~$3\,064$, NIBIO~$7\,246$). La diversidad geogr\'afica y estructural es clave: NIBIO representa el 50\% del test (bosque boreal denso), mientras que RMIT y TUWIEN presentan estructuras de copa radicalmente diferentes.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{Colecciones del dataset FOR-instance V1 utilizadas en este trabajo.}\label{tab:collections}
 \begin{tabular}{llccc}
@@ -115,7 +116,7 @@ Se utiliza el split oficial (70\% dev / 30\% test) con subdivisi\'on interna tra
 
 Los flujos comparten una arquitectura de dos etapas: (1)~preprocesado sem\'antico y (2)~segmentador Watershed~3D, variadas factorialmente en cinco flujos (Fig.~\ref{fig:pipeline}). Los par\'ametros del segmentador se calibran independientemente por flujo mediante grid search sobre val (F1 de instancia, IoU~3D~$\geq 0.5$).
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_05_factorial_analysis}
 \caption{An\'alisis factorial: el seeding por densidad (rojo) supera al CHM (azul) en todos los m\'etodos (+47--74\%), con mejora mayor que el cambio de preprocesado (+27\%).}\label{fig:pipeline}
@@ -144,7 +145,7 @@ El segmentador opera sobre los puntos clasificados como \'arbol en HAG y sigue c
 \paragraph{Calibraci\'on.}
 Par\'ametros calibrados por grid search independiente por flujo (Tabla~\ref{tab:grid-search}, Fig.~\ref{fig:gridsearch}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{Par\'ametros \'optimos del Watershed~3D por flujo (grid search sobre val, F1 inst.\ IoU~3D~$\geq 0.5$).}\label{tab:grid-search}
 \resizebox{\textwidth}{!}{%
@@ -163,7 +164,7 @@ F1 val (medio)          &                           & 0.272 & 0.371 & 0.377 & 0.
 }
 \end{table}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_v4_gridsearch_landscape}
 \caption{Paisaje del grid search para el Flujo~D (RF + Density). Barras rojas: valor \'optimo. El radio m\'inimo de copa (2.0\,m) es el par\'ametro m\'as determinante.}\label{fig:gridsearch}
@@ -193,7 +194,7 @@ Se computan precisi\'on, recall, F1 y \emph{coverage} (fracci\'on de \'arboles G
 
 La Tabla~\ref{tab:results-agg} presenta los resultados sobre el conjunto de test. El Flujo~D (RF + Density) alcanza el mejor F1 de instancia (0.209), superando al Flujo~B (RF + CHM, 0.142) en un 47\% relativo y al baseline (0.112) en un 87\%. El seeding por densidad mejora consistentemente ambos m\'etodos: RF sube de 0.142 a 0.209 y PointNet++ de 0.082 a 0.143.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{Resultados agregados (test, IoU~3D~$\geq 0.5$, promedio sobre 11~plots).}\label{tab:results-agg}
 \resizebox{\textwidth}{!}{%
@@ -217,7 +218,7 @@ Ambos clasificadores logran tree~IoU~$>$~0.97, pero esta calidad no se traduce e
 
 La Fig.~\ref{fig:semantic} muestra la clasificaci\'on sem\'antica sobre CULS~2. La diferencia clave entre clasificadores no es el volumen de error ($<1\%$) sino su distribuci\'on: RF produce FP de borde de copa, mientras que PointNet++ genera FP aislados en suelo que se convierten en semillas esp\'ureas.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_v3_semantic_overlay}
 \caption{Clasificaci\'on sem\'antica sobre CULS~2. Verde: \'arbol correcto; rojo: FP; naranja: FN. RF concentra errores en bordes de copa; PointNet++ produce FP aislados en suelo.}\label{fig:semantic}
@@ -225,7 +226,7 @@ La Fig.~\ref{fig:semantic} muestra la clasificaci\'on sem\'antica sobre CULS~2. 
 
 La Fig.~\ref{fig:f1site} muestra el F1 por sitio. Los patrones clave son: (i)~CULS es el \'unico sitio con F1~$>$~0.5, gracias a copas bien separadas; (ii)~NIBIO (50\% del test) es el caso m\'as desafiante por su canopia densa y uniforme; (iii)~el seeding por densidad mejora en todos los sitios, con mayor ganancia relativa en RMIT (RF: 0.061$\to$0.213) y TUWIEN (RF: 0.000$\to$0.136), donde el CHM es particularmente ineficaz.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_02_f1_by_institution}
 \caption{F1 de instancia por tipo de bosque. El Flujo~D (RF + Density, rojo) domina en todos los sitios excepto CULS (F1\,=\,0.811 con Flujo~B).}\label{fig:f1site}
@@ -235,13 +236,13 @@ La Fig.~\ref{fig:f1site} muestra el F1 por sitio. Los patrones clave son: (i)~CU
 
 Las Figs.~\ref{fig:topculs} y~\ref{fig:topnibio} muestran vistas superiores de predicciones: CULS exhibe buena separaci\'on de copas mientras que NIBIO muestra sobre-fusi\'on persistente.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_v1_topview_culs}
 \caption{Vista superior en CULS~2. El Flujo~D logra la mejor separaci\'on (F1\,=\,0.629); el CHM tiende a fusionar copas adyacentes.}\label{fig:topculs}
 \end{figure}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_v2_topview_nibio}
 \caption{Vista superior en NIBIO~17 (boreal denso). Under-segmentation severo en todos los m\'etodos; F1 m\'aximo 0.256 con Flujo~D.}\label{fig:topnibio}
@@ -249,7 +250,7 @@ Las Figs.~\ref{fig:topculs} y~\ref{fig:topnibio} muestran vistas superiores de p
 
 \subsection{An\'alisis factorial: preprocesado $\times$ seeding}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{F1 de instancia (test) en el dise\~no factorial. $\Delta$: mejora relativa del seeding Density sobre CHM.}\label{tab:factorial}
 \begin{tabular}{lccc}
@@ -266,7 +267,7 @@ PointNet++ MSG          & 0.082 & 0.143 & +74\% \\
 El an\'alisis factorial (Tabla~\ref{tab:factorial}, Fig.~\ref{fig:decoupling}) confirma que el cambio de seeding (CHM $\rightarrow$ Density) produce una mejora mayor (+47--74\%) que el cambio de preprocesado (baseline $\rightarrow$ RF, +27\%), identificando al segmentador como cuello de botella dominante. La interacci\'on entre ambos factores es relevante: la sem\'antica m\'as limpia de RF produce menos semillas esp\'ureas, resultando en menor sobre-segmentaci\'on (Precision RF+Density: 0.418 vs.\ PN++Density: 0.209).
 
 %% --- FIGURA 5: Semantic vs Instance decoupling ---
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_03_semantic_instance_decoupling}
 \caption{Desacoplamiento sem\'antico-instancia. Tree~IoU~$>$~0.97 para ambos clasificadores, pero F1 inst.\ difiere $2.5\times$ (RF vs.\ PN++ con CHM). El segmentador es el factor dominante.}\label{fig:decoupling}
@@ -285,7 +286,7 @@ La HAG domina la clasificaci\'on RF con el 61.5\% de la importancia Gini acumula
 
 La Fig.~\ref{fig:vprofile} ilustra c\'omo el Flujo~D asigna correctamente puntos de tronco y ramas en CULS~2, mientras que la proyecci\'on 2D del CHM confundir\'ia estos puntos. El fill volum\'etrico del Watershed~3D es la diferencia estructural decisiva.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_v5_vertical_profile}
 \caption{Perfil vertical (7\,m) en CULS~Plot~2. El Flujo~D (centro) separa correctamente los \'arboles usando fill volum\'etrico; PointNet++ + CHM (derecha) confunde troncos compartidos.}\label{fig:vprofile}
