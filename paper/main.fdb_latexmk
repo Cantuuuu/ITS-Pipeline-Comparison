@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1776048457.70985 "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" "main.pdf" "main" 1776048459.33907 0
+["pdflatex"] 1776048608.02149 "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" "main.pdf" "main" 1776048609.51658 0
   "../assets/paper/fig_02_f1_by_institution.png" 1776040543.79733 55998 2c2e6f84d1e1d5edd8ae8316a6f84033 ""
   "../assets/paper/fig_03_semantic_instance_decoupling.png" 1776040543.79804 46845 fd5b0b0d736b95a5bebb272e044da934 ""
   "../assets/paper/fig_05_factorial_analysis.png" 1776040543.79975 57105 b8216a3d2fb9909a7bc870832cbe5dcf ""
@@ -8,7 +8,7 @@
   "../assets/paper/fig_v3_semantic_overlay.png" 1776040543.80871 211825 c18bfa3b06a833942c237afb7c0a2eea ""
   "../assets/paper/fig_v4_gridsearch_landscape.png" 1776040543.80957 50046 3d18bb2162d37b61d2e9172fa876b8d5 ""
   "../assets/paper/fig_v5_vertical_profile.png" 1776040543.81173 448178 d2542141cf8d1a27045bde9c348b191c ""
-  "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" 1776048457.39785 28280 2c379dfe57f70d441ace622342680010 ""
+  "/Users/sebas/Dev/Terraquea/ITS-Pipeline-Comparison/paper/main.tex" 1776048606.34428 28222 86086aaaa78acded3b268388eb6c0248 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -49,7 +49,6 @@
   "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb" 1248133631 36281 c355509802a035cadc5f15869451dcee ""
   "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb" 1248133631 36094 798f80770b3b148ceedd006d487db67c ""
   "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
-  "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb" 1248133631 32734 69e00a6b65cedb993666e42eedb3d48f ""
   "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb" 1248133631 32762 224316ccc9ad3ca0423a14971cfa7fc1 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb" 1248133631 33993 9b89b85fd2d9df0482bd47194d1d3bf3 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
@@ -104,8 +103,8 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1770333101 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "main.aux" 1776048459.25873 9126 90f4c2ccff36bcf1f7979b18d70ae3c3 "pdflatex"
-  "main.tex" 1776048457.39785 28280 2c379dfe57f70d441ace622342680010 ""
+  "main.aux" 1776048609.44571 9126 2201b5afc0a9f3833578321b50e38a55 "pdflatex"
+  "main.tex" 1776048606.34428 28222 86086aaaa78acded3b268388eb6c0248 ""
   (generated)
   "main.aux"
   "main.log"
