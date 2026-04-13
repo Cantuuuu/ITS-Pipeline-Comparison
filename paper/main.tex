@@ -9,7 +9,7 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{url}
-
+/
 \graphicspath{{../assets/paper/}}
 
 \begin{document}
@@ -149,7 +149,7 @@ Los flujos propuestos comparten una arquitectura de dos etapas en cascada: (1)~p
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_05_factorial_analysis.png}
+\includegraphics[width=\textwidth]{fig_05_factorial_analysis}
 \caption{An\'alisis factorial: impacto del preprocesado sem\'antico vs estrategia de seeding. El seeding por densidad (rojo) supera consistentemente al seeding CHM cl\'asico (azul) en todos los m\'etodos. El cambio de seeding produce mejoras (+47--74\%) mayores que el cambio de preprocesado sem\'antico (+27\%), confirmando que el segmentador de instancias es el cuello de botella principal.}\label{fig:pipeline}
 \end{figure}
 
@@ -181,7 +181,7 @@ El segmentador opera sobre los puntos clasificados como \'arbol en HAG y sigue c
 \paragraph{Variante Density (Flujos D, E).} Se reemplaza el CHM por una superficie de densidad acumulada en una banda de \emph{top\_band\_m} metros bajo el v\'oxel m\'as alto de cada columna. Esta superficie refleja concentraciones locales de puntos incluso cuando el CHM es casi plano (bosques boreales densos de altura uniforme).
 
 \paragraph{Calibraci\'on por flujo.}
-Los par\'ametros se calibran mediante grid search independiente por flujo sobre el split val (Tabla~\ref{tab:grid-search}). El espacio de b\'usqueda cubre voxel\_size $\in \{0.1, 0.2, 0.3\}$\,m, gaussian\_sigma $\in \{0.3, 0.5, 1.0\}$ y min\_crown\_radius\_m $\in \{0.5, 1.0, 1.5, 2.0\}$\,m; para los flujos D y E se a\~nade top\_band\_m $\in \{2.0, 3.0, 5.0\}$\,m.
+Los par\'ametros se calibran mediante grid search independiente por flujo sobre el split val (Tabla~\ref{tab:grid-search}). La Fig.~\ref{fig:gridsearch} muestra el paisaje del grid search para el Flujo~D (RF + Density), el mejor configurado: el voxel de $0.2$\,m y radio m\'inimo de copa de $2.0$\,m resultan \'optimos, reflejando que la superficie de densidad permite operar a mayor escala sin perder semillas cr\'iticas.
 
 \begin{table}[t]
 \centering
@@ -201,6 +201,12 @@ F1 val (medio)          &                           & 0.272 & 0.371 & 0.377 & 0.
 \end{tabular}%
 }
 \end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_v4_gridsearch_landscape}
+\caption{Paisaje del grid search del Watershed~3D para el Flujo~D (RF + Density seeding) sobre el split val. Cada barra muestra el mejor F1 de instancia obtenido fijando ese valor del par\'ametro. Las barras rojas indican el valor \'optimo seleccionado. El radio m\'inimo de copa (2.0\,m) es el par\'ametro m\'as determinante: valores pequeños generan demasiadas semillas esp\'ureas, mientras que valores grandes fusionan copas adyacentes.}\label{fig:gridsearch}
+\end{figure}
 
 %% ================================================================
 %%  5. PROTOCOLO DE EVALUACI\'ON
@@ -256,42 +262,36 @@ La segmentaci\'on sem\'antica de ambos clasificadores es excelente (tree~IoU~$>$
 
 \subsection{Resultados sem\'anticos y de instancia por sitio}
 
-La Fig.~\ref{fig:semantic} muestra la comparaci\'on cualitativa de las predicciones sem\'anticas de RF y PointNet++ sobre plots representativos. Ambos clasificadores logran tree~IoU~$>$~0.93 en todos los sitios; RF supera a PointNet++ de forma consistente, con ventaja m\'as marcada en RMIT (0.970 vs.\ 0.940) y NIBIO (0.995 vs.\ 0.989).
+La Fig.~\ref{fig:semantic} muestra la superposici\'on de clasificaci\'on sem\'antica sobre el plot CULS~2, con falsos positivos (FP) y falsos negativos (FN) resaltados. Ambos clasificadores logran tree~IoU~$>$~0.93 en todos los sitios. La diferencia clave no est\'a en el volumen de error ($<1\%$) sino en su distribuci\'on espacial: los errores de RF son principalmente FP de borde de copa, mientras que PointNet++ genera FP aislados en suelo que se convierten en semillas esp\'ureas para el Watershed.
 
-%% --- FIGURA: Semantic quality heatmap ---
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_08_semantic_heatmap.png}
-\caption{Calidad de segmentaci\'on sem\'antica (mIoU) por tipo de bosque y m\'etodo. Ambos clasificadores (RF y PointNet++) alcanzan mIoU~$>$~0.97 en todos los sitios, sin diferencias significativas ($<$~1~pp). Esta calidad sem\'antica casi id\'entica no se traduce proporcionalmente en rendimiento de instancia, evidenciando el desacoplamiento entre ambas tareas.}\label{fig:semantic}
+\includegraphics[width=\textwidth]{fig_v3_semantic_overlay}
+\caption{Superposici\'on de clasificaci\'on sem\'antica sobre CULS~Plot~2. Verde: \'arbol correcto. Rojo: falso positivo (no-\'arbol clasificado como \'arbol). Naranja: falso negativo (\'arbol perdido). RF concentra sus errores en bordes de copa; PointNet++ produce FP aislados en zonas de suelo que generan semillas esp\'ureas en la Etapa~2, explicando su menor rendimiento de instancia pese a m\'etricas sem\'anticas similares.}\label{fig:semantic}
 \end{figure}
 
-La Fig.~\ref{fig:f1site} muestra el F1 de instancia por sitio para los cinco flujos. Los patrones m\'as relevantes son: (i)~CULS es el \'unico sitio con F1~$>$~0.5, gracias a copas bien separadas; (ii)~NIBIO (50\% del test set) es el caso m\'as desafiante; (iii)~el seeding por densidad mejora consistentemente en todos los sitios, con la ganancia m\'as notable en RMIT (RF: de 0.061 a 0.213) y TUWIEN (RF: de 0.000 a 0.136), donde el seeding CHM fallaba completamente.
+La Fig.~\ref{fig:f1site} muestra el F1 de instancia por sitio. Los patrones clave son: (i)~CULS es el \'unico sitio con F1~$>$~0.5 por copas bien separadas; (ii)~NIBIO (50\% del test) es el caso m\'as desafiante; (iii)~el seeding por densidad mejora en todos los sitios, con mayor ganancia en RMIT (RF: 0.061$\to$0.213) y TUWIEN (RF: 0.000$\to$0.136).
 
-%% --- FIGURA 3: F1 by institution ---
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_02_f1_by_institution.png}
-\caption{F1 de instancia (IoU~3D~$\geq 0.5$) por sitio y flujo sobre el conjunto de test. El seeding por densidad (Flujos D y E, trama rayada) supera consistentemente al seeding CHM (Flujos B y C) en todos los sitios. CULS presenta F1 elevado por sus copas bien diferenciadas; NIBIO es el caso m\'as desafiante para todos los m\'etodos.}\label{fig:f1site}
+\includegraphics[width=\textwidth]{fig_02_f1_by_institution}
+\caption{F1 de instancia (IoU~3D~$\geq 0.5$) por tipo de bosque y flujo. El Flujo~D (RF + Density, rojo) domina en todos los sitios excepto CULS, donde el Flujo~B alcanza F1\,=\,0.811 por la buena separaci\'on de copas. NIBIO, con el 50\% de los \'arboles de test, es el caso cr\'itico para el rendimiento agregado.}\label{fig:f1site}
 \end{figure}
-
 
 \subsection{Visualizaci\'on de segmentaci\'on de instancias}
 
-La Fig.~\ref{fig:instances} ilustra cualitativamente los resultados de instancia en CULS (mejor caso) y NIBIO (peor caso). En CULS, el Flujo~D separa correctamente las copas individuales; en NIBIO, la canopia uniforme impide la detecci\'on de semillas incluso con seeding por densidad.
+Las Figs.~\ref{fig:topculs} y~\ref{fig:topnibio} muestran vistas superiores de predicciones sobre datos reales. En CULS, el Flujo~D separa la mayor\'ia de las copas con alta precisi\'on; en NIBIO, la canopia uniforme y densa produce sobre-fusi\'on de instancias incluso con seeding por densidad.
 
-%% --- FIGURA 2: Instance visualization ---
 \begin{figure}[t]
 \centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{fig_07_confusion_matrices.png}
-  \caption{CULS --- copas bien separadas (F1 Flujo~D: 0.629)}
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{fig_09_instance_heatmap.png}
-  \caption{NIBIO --- canopia uniforme densa (F1 Flujo~D: 0.151)}
-\end{subfigure}
-\caption{Segmentaci\'on de instancias con el Flujo~D (RF + Density seeding). Cada color representa un \'arbol predicho; los \'arboles GT se indican con contorno negro. CULS ejemplifica el caso favorable (copas diferenciadas); NIBIO ilustra el l\'imite del pipeline ante canopias de altura uniforme.}\label{fig:instances}
+\includegraphics[width=\textwidth]{fig_v1_topview_culs}
+\caption{Vista superior de segmentaci\'on de instancias en CULS~Plot~2 (con\'ifera templada). Cada color es un \'arbol predicho; el primer panel es el Ground Truth. El Flujo~D logra la mejor separaci\'on individual (F1\,=\,0.629). El seeding CHM tiende a fusionar \'arboles adyacentes; el seeding por densidad los separa. PointNet++ genera m\'as fragmentos esp\'ureos que RF.}\label{fig:topculs}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_v2_topview_nibio}
+\caption{Vista superior de segmentaci\'on de instancias en NIBIO~Plot~17 (bosque boreal denso). Todos los m\'etodos presentan under-segmentation severo: el seeding CHM apenas detecta semillas en la canopia casi plana. El seeding por densidad mejora la detecci\'on pero no resuelve la separaci\'on en bosques de alta densidad (F1 m\'aximo: 0.256 con Flujo~D). NIBIO representa el caso l\'imite del pipeline actual.}\label{fig:topnibio}
 \end{figure}
 
 \subsection{An\'alisis factorial: preprocesado $\times$ seeding}
@@ -315,7 +315,7 @@ El an\'alisis factorial (Tabla~\ref{tab:factorial} y Fig.~\ref{fig:decoupling}) 
 %% --- FIGURA 5: Semantic vs Instance decoupling ---
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_03_semantic_instance_decoupling.png}
+\includegraphics[width=\textwidth]{fig_03_semantic_instance_decoupling}
 \caption{Desacoplamiento entre calidad sem\'antica y calidad de instancia. Aunque ambos clasificadores alcanzan tree~IoU~$>$~0.97 (diferencia~$<$~1\,pp), el F1 de instancia difiere por un factor~$2.5\times$ entre RF y PointNet++ con seeding CHM (0.142 vs.\ 0.082). El seeding por densidad (flechas) comprime esta brecha pero no la elimina. El segmentador, no el clasificador sem\'antico, es el factor dominante del pipeline.}\label{fig:decoupling}
 \end{figure}
 
@@ -345,6 +345,14 @@ La HAG domina ampliamente la clasificaci\'on: las dos escalas de HAG suman el 61
 \section{Discusi\'on}\label{sec:discussion}
 
 \subsection{El segmentador como cuello de botella}
+
+La Fig.~\ref{fig:vprofile} ilustra el perfil vertical de una secci\'on transversal del plot CULS~2: es posible observar c\'omo el Flujo~D (RF + Density) asigna correctamente puntos de tronco y ramas a sus \'arboles respectivos, mientras que la aproximaci\'on 2D del CHM confundir\'ia estos puntos bajo proyecci\'on horizontal. El fill volum\'etrico del Watershed~3D es la diferencia estructural decisiva respecto a los m\'etodos cl\'asicos basados en CHM.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_v5_vertical_profile}
+\caption{Perfil vertical de una secci\'on transversal de 7\,m en CULS~Plot~2. Cada color es un \'arbol predicho. El Ground Truth (izquierda) muestra la estructura real 3D con copas solapantes en altura. El Flujo~D (RF + Density, centro) separa correctamente la mayor\'ia de los \'arboles individuales usando el fill volum\'etrico del Watershed~3D; PointNet++ + CHM (derecha) produce mayor confusi\'on en la zona de troncos compartidos.}\label{fig:vprofile}
+\end{figure}
 
 La Fig.~\ref{fig:decoupling} sintetiza el hallazgo central: la sem\'antica casi perfecta (tree~IoU~$>$~0.97) no se traduce en segmentaci\'on de instancias proporcional (F1 m\'aximo 0.209). El factor limitante es la capacidad del Watershed~3D para generar semillas correctas y separar copas adyacentes. El an\'alisis factorial confirma que la inversi\'on m\'as rentable en un pipeline ITS de dos etapas no est\'a en mejorar la sem\'antica por encima del umbral que RF ya supera ampliamente, sino en mejorar el segmentador de instancias. El efecto es dependiente del sitio: en CULS (copas separadas), RF+CHM alcanza F1\,=\,0.811 y el Density seeding no aporta mejora sustancial; en NIBIO, RMIT y TUWIEN, donde las copas se superponen, el CHM falla sistem\'aticamente y el Density seeding es necesario para obtener rendimiento no trivial.
 
