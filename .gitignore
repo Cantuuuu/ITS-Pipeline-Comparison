@@ -86,3 +86,36 @@ Thumbs.db
 .DS_Store
 
 FORinstance_dataset
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.synctex.gz
+paper/*.out
+paper/*.toc
+paper/*.bbl
+paper/*.blg
+paper/*.lof
+paper/*.lot
+paper/*.nav
+paper/*.snm
+paper/*.vrb
+paper/*.idx
+paper/*.ind
+paper/*.ilg
+paper/*.fff
+paper/*.ttt
+paper/*.acn
+paper/*.acr
+paper/*.alg
+paper/*.glo
+paper/*.gls
+paper/*.glg
+paper/*.run.xml
+paper/*-blx.bib
+paper/*.bcf
+paper/*.figlist
+paper/*.makefile
+paper/main.pdf
