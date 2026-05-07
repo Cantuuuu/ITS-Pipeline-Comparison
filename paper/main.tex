@@ -212,7 +212,7 @@ Se computan precisi\'on, recall, F1 y \emph{coverage} (fracci\'on de \'arboles G
 
 \subsection{Resultados agregados}
 
-La Tabla~\ref{tab:results-agg} presenta los resultados sobre el conjunto de test. El Flujo~D (RF + Density) alcanza el mejor F1 de instancia (0.209), superando al Flujo~B (RF + CHM, 0.142) en un 47\% relativo y al baseline (0.112) en un 87\%. El seeding por densidad mejora consistentemente ambos m\'etodos: RF sube de 0.142 a 0.209 y PointNet++ de 0.082 a 0.143.
+La Tabla~\ref{tab:results-agg} presenta los resultados sobre el conjunto de test. El Flujo~D (RF + Density) alcanza el mejor desempeño agregado de segmentación de instancias (F1\,=\,0.209), mientras que el seeding por densidad mejora consistentemente ambos clasificadores respecto al CHM tradicional.
 
 \begin{table}[H]
 \centering
@@ -236,7 +236,7 @@ Ambos clasificadores logran tree~IoU~$>$~0.97, pero esta calidad no se traduce e
 
 \subsection{Resultados por sitio}
 
-La Fig.~\ref{fig:semantic} muestra la clasificaci\'on sem\'antica sobre CULS~2. La diferencia clave entre clasificadores no es el volumen de error ($<1\%$) sino su distribuci\'on: RF produce FP de borde de copa, mientras que PointNet++ genera FP aislados en suelo que se convierten en semillas esp\'ureas.
+La Fig.~\ref{fig:semantic} muestra la clasificaci\'on sem\'antica sobre CULS~2. RF concentra errores principalmente en bordes de copa, mientras que PointNet++ produce falsos positivos aislados que posteriormente generan semillas espurias durante la segmentación.
 
 \begin{figure}[H]
 \centering
@@ -244,7 +244,7 @@ La Fig.~\ref{fig:semantic} muestra la clasificaci\'on sem\'antica sobre CULS~2. 
 \caption{Clasificaci\'on sem\'antica sobre CULS~2. Verde: \'arbol correcto; rojo: FP; naranja: FN. RF concentra errores en bordes de copa; PointNet++ produce FP aislados en suelo.}\label{fig:semantic}
 \end{figure}
 
-La Fig.~\ref{fig:f1site} muestra el F1 por sitio. Los patrones clave son: (i)~CULS es el \'unico sitio con F1~$>$~0.5, gracias a copas bien separadas; (ii)~NIBIO (50\% del test) es el caso m\'as desafiante por su canopia densa y uniforme; (iii)~el seeding por densidad mejora en todos los sitios, con mayor ganancia relativa en RMIT (RF: 0.061$\to$0.213) y TUWIEN (RF: 0.000$\to$0.136), donde el CHM es particularmente ineficaz.
+La Fig.~\ref{fig:f1site} muestra el F1 por sitio. CULS presenta el mejor desempeño debido a la separación clara entre copas, mientras que NIBIO representa el escenario más desafiante por su continuidad de dosel y alta densidad estructural. El seeding por densidad mejora consistentemente todos los sitios, especialmente en RMIT y TUWIEN, donde el CHM pierde capacidad discriminativa bajo estructuras de copa complejas.
 
 \begin{figure}[H]
 \centering
@@ -352,9 +352,13 @@ Más que representar un fracaso aislado del pipeline evaluado, este desempeño e
 %% ================================================================
 \section{Conclusiones}\label{sec:conclusions}
 
-Mediante un dise\~no factorial $3 \times 2$ sobre FOR-instance~V1, los resultados sugieren que: (1)~el segmentador de instancias, no el preprocesado sem\'antico, es el cuello de botella principal del pipeline ITS; (2)~Random Forest con features geom\'etricas supera a PointNet++ MSG en todas las combinaciones evaluadas, sin requerir GPU; y (3)~el seeding por densidad de copa mejora consistentemente al seeding CHM (+47\% para RF, +74\% para PointNet++), siendo especialmente efectivo en bosques densos de altura uniforme.
+La combinación RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una línea base robusta y eficiente. La brecha entre calidad semántica y calidad de instancia sugiere que las mejoras más impactantes en ITS vendrán de segmentadores capaces de separar copas adyacentes en canopias densas mediante priors geométricos, arquitecturas end-to-end o estrategias de seeding más adaptativas.
 
-La combinaci\'on RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una l\'inea base robusta y eficiente. La brecha entre calidad sem\'antica y calidad de instancia sugiere que las mejoras m\'as impactantes en ITS vendr\'an de segmentadores capaces de separar copas adyacentes en canopias densas mediante priors sobre geometr\'ia de copa, segmentadores end-to-end, o mejores estrategias de seeding. Estos resultados no implican que Watershed~3D represente el l\'imite superior del desempe\~no posible, sino que evidencian c\'omo la continuidad geom\'etrica de las copas puede limitar la separaci\'on de instancias incluso cuando la clasificaci\'on sem\'antica es altamente precisa. Trabajo futuro incluye comparaci\'on con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensi\'on a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad seg\'un la variabilidad local de altura. Más que proponer un nuevo método competitivo estado-del-arte, este trabajo aporta una disección experimental interpretable del pipeline ITS, permitiendo observar explícitamente cómo la calidad semántica y la separación geométrica de instancias interactúan bajo condiciones ULS densas. El c\'odigo fuente y los scripts de reproducci\'on est\'an disponibles en \url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}.
+Estos resultados no implican que Watershed~3D represente el límite superior del desempeño posible, sino que evidencian cómo la continuidad geométrica de las copas puede limitar la separación de instancias incluso cuando la clasificación semántica es altamente precisa.
+
+Más que proponer un nuevo método competitivo estado-del-arte, este trabajo aporta una disección experimental interpretable del pipeline ITS bajo ambientes ULS densos.
+
+Trabajo futuro incluye comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad según la variabilidad local de altura. El c\'odigo fuente y los scripts de reproducci\'on est\'an disponibles en \url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}.
 
 %% ================================================================
 %%  REFERENCIAS
