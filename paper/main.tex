@@ -50,9 +50,11 @@ Automated individual tree segmentation (ITS) in high-density UAV laser scanning 
 
 \subsection{Motivaci\'on}
 
-Automated forest inventories at tree-individual level are essential for carbon stock estimation, biodiversity monitoring, and precision forestry. UAV laser scanning (ULS) provides point densities one to two orders of magnitude higher than conventional ALS ($\sim$7{,}000~pts/m$^2$ vs.\ $\sim$5~pts/m$^2$), enabling characterization of individual trees including crowns, trunks, branches, and understory. However, automated Individual Tree Segmentation (ITS) in ULS data remains an open problem due to height model noise, crown--understory ambiguity, and structural variability across forest types.
+Los inventarios forestales automatizados a nivel de \'arbol individual son esenciales para la estimaci\'on de carbono almacenado, el monitoreo de la biodiversidad y la silvicultura de precisi\'on. El escaneo l\'aser UAV (ULS) proporciona densidades de puntos entre uno y dos \'ordenes de magnitud superiores a las del ALS convencional ($\sim$7{,}000~pts/m$^2$ vs.\ $\sim$5~pts/m$^2$), lo que permite caracterizar \'arboles individuales, incluidas sus copas, troncos, ramas y sotobosque. Sin embargo, la segmentaci\'on autom\'atica de \'arboles individuales (ITS) en datos ULS sigue siendo un problema abierto debido al ruido en los modelos de altura, la ambig\"uedad entre copa y sotobosque, y la variabilidad estructural entre tipos de bosque.
 
-ITS pipelines typically operate in two cascaded stages: a semantic classifier that isolates tree points from ground, understory and noise, followed by an instance segmenter that assigns each tree point to a unique tree identifier. Deep learning methods such as PointNet++~\cite{qi2017} have raised expectations for semantic quality, yet their practical advantage over classical Random Forest classifiers in the specific context of ITS preprocessing remains unclear. At the same time, 3D volumetric Watershed methods have evolved beyond the classical 2D CHM approach~\cite{dalponte2016}, enabling direct exploitation of vertical point density. Despite these advances, the relative impact of each stage on end-to-end performance has rarely been isolated experimentally~\cite{qi2017,breiman2001,puliti2023}, and no controlled study has systematically varied the preprocessor while keeping the instance segmenter identical across multiple forest types.
+
+
+Los pipelines de ITS suelen operar en dos etapas encadenadas: un clasificador sem\'antico que a\'isla los puntos de \'arbol respecto al suelo, sotobosque y ruido, seguido de un segmentador de instancias que asigna a cada punto de \'arbol un identificador \'unico. Los m\'etodos de aprendizaje profundo, como PointNet++~\cite{qi2017}, han generado altas expectativas respecto a la calidad sem\'antica; sin embargo, su ventaja pr\'actica frente a clasificadores cl\'asicos como Random Forest en el contexto espec\'ifico del preprocesado para ITS a\'un no est\'a clara. Al mismo tiempo, los m\'etodos volum\'etricos de Watershed~3D han evolucionado m\'as all\'a del enfoque cl\'asico 2D basado en CHM~\cite{dalponte2016}, permitiendo explotar directamente la densidad vertical de puntos. A pesar de estos avances, el impacto relativo de cada etapa sobre el rendimiento extremo a extremo rara vez se ha aislado experimentalmente~\cite{qi2017,breiman2001,puliti2023}, y no existe un estudio controlado que var\'ie sistem\'aticamente el preprocesado manteniendo id\'entico el segmentador de instancias a trav\'es de m\'ultiples tipos de bosque.
 
 \subsection{Contribuciones}
 
@@ -64,17 +66,17 @@ Las contribuciones de este trabajo son: (1)~una comparaci\'on factorial $3 \time
 %% ================================================================
 \section{Trabajo Relacionado}\label{sec:related}
 
-\subsection{Individual tree detection and instance segmentation}
+\subsection{Detección de árboles individuales y segmentación de instancias}
 
-In conventional ALS (${<}10$~pts/m$^2$), the dominant ITS approach detects CHM local maxima and delineates crowns via 2D watershed~\cite{popescu2002,silva2016,dalponte2016}. These methods degrade in dense, multi-layered canopies where crowns overlap. ULS data (${\sim}10^3$--$10^4$~pts/m$^2$) enables volumetric 3D approaches that separate adjacent trunks and understory via fill rather than horizontal projection~\cite{dalponte2016}, but few works isolate the contribution of semantic preprocessing from the instance segmenter. This gap motivates our controlled factorial design.
+En ALS convencional (${<}10$~pts/m$^2$), el enfoque dominante para ITS detecta m\'aximos locales en el CHM y delimita copas mediante watershed~2D~\cite{popescu2002,silva2016,dalponte2016}. Estos m\'etodos se degradan en canopias densas y estratificadas, donde las copas se superponen. Los datos ULS (${\sim}10^3$--$10^4$~pts/m$^2$) habilitan enfoques volum\'etricos~3D que separan troncos adyacentes y sotobosque mediante llenado volum\'etrico, en lugar de depender de una proyecci\'on horizontal~\cite{dalponte2016}; sin embargo, pocos trabajos a\'islan la contribuci\'on del preprocesado sem\'antico respecto del segmentador de instancias. Esta brecha motiva nuestro dise\~no factorial controlado.
 
-\subsection{Semantic segmentation of forest point clouds}
+\subsection{Segmentación semántica de nubes de puntos forestales}
 
-Classical methods use handcrafted geometric features with Random Forest~\cite{breiman2001} or SVM~\cite{weinmann2015,weinmann2017}, while deep learning methods (PointNet~\cite{qi2016}, PointNet++~\cite{qi2017}) learn features end-to-end. PointNet++ has shown promising ULS results with height-normalized features, but semantic classification is predominantly evaluated as a final task; its role as ITS preprocessing remains understudied.
+Los m\'etodos cl\'asicos emplean caracter\'isticas geom\'etricas dise\~nadas manualmente junto con Random Forest~\cite{breiman2001} o SVM~\cite{weinmann2015,weinmann2017}, mientras que los m\'etodos de aprendizaje profundo (PointNet~\cite{qi2016}, PointNet++~\cite{qi2017}) aprenden representaciones de extremo a extremo. PointNet++ ha mostrado resultados prometedores en ULS con caracter\'isticas normalizadas por altura, pero la clasificaci\'on sem\'antica se eval\'ua predominantemente como tarea final; su papel como preprocesado para ITS sigue poco estudiado.
 
 \subsection{Benchmarks}
 
-FOR-instance~V1~\cite{puliti2023} assembles ULS plots from five forest types across four continents with point-level semantic and instance annotations. FOR-instanceV2~\cite{xiang2025} extends it; we evaluate on V1 for comparability. NeonTreeEvaluation~\cite{weinstein2021} provides multi-modal data but is limited to North American ecosystems.
+FOR-instance~V1~\cite{puliti2023} re'une parcelas ULS de cinco tipos de bosque distribuidos en cuatro continentes, con anotaciones sem'anticas y de instancia a nivel de punto. FOR-instanceV2~\cite{xiang2025} ampl'ia este recurso; en este trabajo evaluamos sobre V1 para mantener la comparabilidad. NeonTreeEvaluation~\cite{weinstein2021} ofrece datos multimodales, pero est'a limitado a ecosistemas de Norteam'erica.
 
 %% ================================================================
 %%  3. DATASET
