@@ -190,6 +190,14 @@ F1 val (medio)          &                           & 0.272 & 0.371 & 0.377 & 0.
 \caption{Paisaje del grid search para el Flujo~D (RF + Density). Barras rojas: valor \'optimo. El radio m\'inimo de copa (2.0\,m) es el par\'ametro m\'as determinante.}\label{fig:gridsearch}
 \end{figure}
 
+\subsection{Detalles computacionales y reproducibilidad}
+Todos los experimentos fueron implementados en Python utilizando Open3D, Scikit-learn y PyTorch. El entrenamiento de PointNet++ se realizó utilizando una GPU NVIDIA RTX~3060 con 12\,GB de VRAM, mientras que los pipelines basados en Random Forest fueron ejecutados completamente en CPU.
+
+El entrenamiento de RF requirió aproximadamente 16 minutos por ejecución, mientras que PointNet++ requirió aproximadamente 2.5 horas de entrenamiento para 100 épocas bajo la configuración evaluada. Los experimentos utilizaron semillas fijas para train/validation split y calibración de hiperparámetros.
+
+El código fuente completo, scripts de reproducción y configuraciones experimentales están disponibles públicamente en:
+\url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}
+
 %% ================================================================
 %%  5. PROTOCOLO DE EVALUACI\'ON
 %% ================================================================
@@ -358,8 +366,7 @@ Estos resultados no implican que Watershed~3D represente el límite superior del
 
 Más que proponer un nuevo método competitivo estado-del-arte, este trabajo aporta una disección experimental interpretable del pipeline ITS bajo ambientes ULS densos.
 
-Trabajo futuro incluye comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad según la variabilidad local de altura. El c\'odigo fuente y los scripts de reproducci\'on est\'an disponibles en \url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}.
-
+Trabajo futuro incluye comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad según la variabilidad local de altura.
 %% ================================================================
 %%  REFERENCIAS
 %% ================================================================
