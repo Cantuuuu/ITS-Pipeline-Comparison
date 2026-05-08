@@ -220,25 +220,39 @@ Se computan precisi\'on, recall, F1 y \emph{coverage} (fracci\'on de \'arboles G
 
 \subsection{Resultados agregados}
 
-La Tabla~\ref{tab:results-agg} presenta los resultados sobre el conjunto de test. El Flujo~D (RF + Density) alcanza el mejor desempeño agregado de segmentación de instancias (F1\,=\,0.209), mientras que el seeding por densidad mejora consistentemente ambos clasificadores respecto al CHM tradicional.
+Las Tablas~\ref{tab:results-sem} y~\ref{tab:results-inst} presenta los resultados sobre el conjunto de test. El Flujo~D (RF + Density) alcanza el mejor desempeño agregado de segmentación de instancias (F1\,=\,0.209), mientras que el seeding por densidad mejora consistentemente ambos clasificadores respecto al CHM tradicional.
 
 \begin{table}[H]
 \centering
-\caption{Resultados agregados (test, IoU~3D~$\geq 0.5$, media $\pm$ SD sobre $n=11$~plots).}\label{tab:results-agg}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llccccccc}
+\caption{Calidad sem\'antica por flujo (test, nivel de punto).}\label{tab:results-sem}
+\begin{tabular}{llccc}
 \toprule
-Flujo & Seeding & sem mIoU & tree IoU & sem F1 & inst Prec & inst Recall & inst F1 & Coverage \\
+Flujo & Seeding & sem mIoU & tree IoU & sem F1 \\
 \midrule
-A --- Sin preproc.       & CHM     & --    & --    & --    & $0.138 \pm 0.149$ & $0.133 \pm 0.143$ & $0.112 \pm 0.116$ & $0.133 \pm 0.143$ \\
-B --- Random Forest      & CHM     & 0.985 & 0.990 & 0.996 & $0.394 \pm 0.402$ & $0.110 \pm 0.118$ & $0.142 \pm 0.226$ & $0.110 \pm 0.118$ \\
-C --- PointNet++ MSG     & CHM     & 0.974 & 0.982 & 0.994 & $0.172 \pm 0.259$ & $0.060 \pm 0.079$ & $0.082 \pm 0.162$ & $0.060 \pm 0.079$ \\
-D --- Random Forest      & Density & 0.985 & 0.990 & 0.996 & $0.418 \pm 0.291$ & $0.150 \pm 0.097$ & $\mathbf{0.209 \pm 0.161}$ & $0.150 \pm 0.097$ \\
-E --- PointNet++ MSG     & Density & 0.974 & 0.982 & 0.994 & $0.209 \pm 0.148$ & $0.118 \pm 0.076$ & $0.143 \pm 0.109$ & $0.118 \pm 0.076$ \\
+A --- Sin preproc.       & CHM     & --    & --    & --    \\
+B --- Random Forest      & CHM     & 0.985 & 0.990 & 0.996 \\
+C --- PointNet++ MSG     & CHM     & 0.974 & 0.982 & 0.994 \\
+D --- Random Forest      & Density & 0.985 & 0.990 & 0.996 \\
+E --- PointNet++ MSG     & Density & 0.974 & 0.982 & 0.994 \\
 \bottomrule
-\multicolumn{9}{l}{\footnotesize $^\dagger$SD $>$ media en algunos flujos refleja distribuciones de F1 fuertemente asim\'etricas con acumulaci\'on en cero (plots donde el segmentador falla completamente); v\'ease mediana en resultados complementarios.}
-\end{tabular}%
-}
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Resultados de segmentaci\'on de instancias (test, IoU~3D~$\geq 0.5$, media $\pm$ SD sobre $n=11$~plots).}\label{tab:results-inst}
+\begin{tabular}{llcccc}
+\toprule
+Flujo & Seeding & inst Prec & inst Recall & inst F1 & Coverage \\
+\midrule
+A --- Sin preproc.       & CHM     & $0.138 \pm 0.149$ & $0.133 \pm 0.143$ & $0.112 \pm 0.116$ & $0.133 \pm 0.143$ \\
+B --- Random Forest      & CHM     & $0.394 \pm 0.402$ & $0.110 \pm 0.118$ & $0.142 \pm 0.226$ & $0.110 \pm 0.118$ \\
+C --- PointNet++ MSG     & CHM     & $0.172 \pm 0.259$ & $0.060 \pm 0.079$ & $0.082 \pm 0.162$ & $0.060 \pm 0.079$ \\
+D --- Random Forest      & Density & $0.418 \pm 0.291$ & $0.150 \pm 0.097$ & $\mathbf{0.209 \pm 0.161}$ & $0.150 \pm 0.097$ \\
+E --- PointNet++ MSG     & Density & $0.209 \pm 0.148$ & $0.118 \pm 0.076$ & $0.143 \pm 0.109$ & $0.118 \pm 0.076$ \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize $^\dagger$SD $>$ media en algunos flujos refleja distribuciones de F1 fuertemente asim\'etricas con acumulaci\'on en cero (plots donde el segmentador falla completamente); v\'ease mediana en resultados complementarios.}
+\end{tabular}
 \end{table}
 
 Ambos clasificadores logran tree~IoU~$>$~0.97, pero esta calidad no se traduce en instancia (F1 m\'aximo $0.209 \pm 0.161$), evidenciando al segmentador como cuello de botella. La alta dispersi\'on entre plots (SD comparable o superior a la media en todos los flujos) refleja la heterogeneidad estructural entre los cinco tipos de bosque evaluados. Notablemente, el density seeding reduce la variabilidad de RF (SD: $0.226 \rightarrow 0.161$), sugiriendo mayor robustez entre sitios.
