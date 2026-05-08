@@ -56,7 +56,7 @@ Los inventarios forestales automatizados a nivel de \'arbol individual son esenc
 
 
 
-Los pipelines de ITS suelen operar en dos etapas encadenadas: un clasificador sem\'antico que a\'isla los puntos de \'arbol respecto al suelo, sotobosque y ruido, seguido de un segmentador de instancias que asigna a cada punto de \'arbol un identificador \'unico. Los m\'etodos de aprendizaje profundo, como PointNet++~\cite{qi2017}, han generado altas expectativas respecto a la calidad sem\'antica; sin embargo, su ventaja pr\'actica frente a clasificadores cl\'asicos como Random Forest en el contexto espec\'ifico del preprocesado para ITS a\'un no est\'a clara. Al mismo tiempo, los m\'etodos volum\'etricos de Watershed~3D han evolucionado m\'as all\'a del enfoque cl\'asico 2D basado en CHM~\cite{dalponte2016}, permitiendo explotar directamente la densidad vertical de puntos. A pesar de estos avances, el impacto relativo de cada etapa sobre el rendimiento extremo a extremo rara vez se ha aislado experimentalmente~\cite{qi2017,breiman2001,puliti2023}, la mayoría de los trabajos recientes en ITS se enfocan principalmente en incrementar el desempeño global mediante arquitecturas end-to-end cada vez más complejas. Sin embargo, al acoplar estrechamente la clasificación semántica y la segmentación de instancias dentro de modelos tipo black-box, resulta difícil identificar cuál de las etapas domina realmente el error final del pipeline.
+Los pipelines de ITS suelen operar en dos etapas encadenadas: un clasificador sem\'antico que a\'\i{}sla los puntos de \'arbol respecto al suelo, sotobosque y ruido, seguido de un segmentador de instancias que asigna a cada punto de \'arbol un identificador \'unico. Los m\'etodos de aprendizaje profundo, como PointNet++~\cite{qi2017}, han generado altas expectativas respecto a la calidad sem\'antica; sin embargo, su ventaja pr\'actica frente a clasificadores cl\'asicos como Random Forest en el contexto espec\'\i{}fico del preprocesado para ITS a\'un no est\'a clara. Al mismo tiempo, los m\'etodos volum\'etricos de Watershed~3D han evolucionado m\'as all\'a del enfoque cl\'asico 2D basado en CHM~\cite{dalponte2016}, permitiendo explotar directamente la densidad vertical de puntos. A pesar de estos avances, el impacto relativo de cada etapa sobre el rendimiento extremo a extremo rara vez se ha aislado experimentalmente~\cite{qi2017,breiman2001,puliti2023}, la mayoría de los trabajos recientes en ITS se enfocan principalmente en incrementar el desempeño global mediante arquitecturas end-to-end cada vez más complejas. Sin embargo, al acoplar estrechamente la clasificación semántica y la segmentación de instancias dentro de modelos tipo black-box, resulta difícil identificar cuál de las etapas domina realmente el error final del pipeline.
 
 Esto motiva una pregunta fundamental: en ambientes forestales ULS densos, ¿el principal límite del ITS moderno proviene de la clasificación semántica o de la separación de instancias?
 
@@ -80,11 +80,11 @@ Las contribuciones de este trabajo son:
 
 \subsection{Detección de árboles individuales y segmentación de instancias}
 
-En ALS convencional (${<}10$~pts/m$^2$), el enfoque dominante para ITS detecta m\'aximos locales en el CHM y delimita copas mediante watershed~2D~\cite{popescu2002,silva2016,dalponte2016}. Estos m\'etodos se degradan en canopias densas y estratificadas, donde las copas se superponen. Los datos ULS (${\sim}10^3$--$10^4$~pts/m$^2$) habilitan enfoques volum\'etricos~3D que separan troncos adyacentes y sotobosque mediante llenado volum\'etrico, en lugar de depender de una proyecci\'on horizontal~\cite{dalponte2016}; sin embargo, pocos trabajos a\'islan la contribuci\'on del preprocesado sem\'antico respecto del segmentador de instancias. Esta brecha motiva nuestro dise\~no factorial controlado.
+En ALS convencional (${<}10$~pts/m$^2$), el enfoque dominante para ITS detecta m\'aximos locales en el CHM y delimita copas mediante watershed~2D~\cite{popescu2002,silva2016,dalponte2016}. Estos m\'etodos se degradan en canopias densas y estratificadas, donde las copas se superponen. Los datos ULS (${\sim}10^3$--$10^4$~pts/m$^2$) habilitan enfoques volum\'etricos~3D que separan troncos adyacentes y sotobosque mediante llenado volum\'etrico, en lugar de depender de una proyecci\'on horizontal~\cite{dalponte2016}; sin embargo, pocos trabajos a\'\i{}slan la contribuci\'on del preprocesado sem\'antico respecto del segmentador de instancias. Esta brecha motiva nuestro dise\~no factorial controlado.
 
 \subsection{Segmentación semántica de nubes de puntos forestales}
 
-Los m\'etodos cl\'asicos emplean caracter\'isticas geom\'etricas dise\~nadas manualmente junto con Random Forest~\cite{breiman2001} o SVM~\cite{weinmann2015,weinmann2017}, mientras que los m\'etodos de aprendizaje profundo (PointNet~\cite{qi2016}, PointNet++~\cite{qi2017}) aprenden representaciones de extremo a extremo. PointNet++ ha mostrado resultados prometedores en ULS con caracter\'isticas normalizadas por altura, pero la clasificaci\'on sem\'antica se eval\'ua predominantemente como tarea final; su papel como preprocesado para ITS sigue poco estudiado.
+Los m\'etodos cl\'asicos emplean caracter\'\i{}sticas geom\'etricas dise\~nadas manualmente junto con Random Forest~\cite{breiman2001} o SVM~\cite{weinmann2015,weinmann2017}, mientras que los m\'etodos de aprendizaje profundo (PointNet~\cite{qi2016}, PointNet++~\cite{qi2017}) aprenden representaciones de extremo a extremo. PointNet++ ha mostrado resultados prometedores en ULS con caracter\'\i{}sticas normalizadas por altura, pero la clasificaci\'on sem\'antica se eval\'ua predominantemente como tarea final; su papel como preprocesado para ITS sigue poco estudiado.
 
 \subsection{Benchmarks}
 
@@ -98,20 +98,20 @@ Métodos end-to-end recientes como TreeLearn~\cite{henrich2024}, SegmentAnyTree~
 
 \subsection{FOR-instance}
 
-FOR-instance~V1~\cite{puliti2023} es un benchmark ULS con anotaciones sem\'anticas e de instancias a nivel de punto. Utilizamos cinco de las seis colecciones (Tabla~\ref{tab:collections}), excluyendo NIBIO2 por sobre-representar el bosque boreal noruego, lo que sesgar\'ia las m\'etricas agregadas. Las densidades var\'ian entre $454$ y $10\,156$~pts/m$^2$ (mediana por colecci\'on: RMIT~$473$, TUWIEN~$1\,406$, CULS~$2\,510$, SCION~$3\,064$, NIBIO~$7\,246$). La diversidad geogr\'afica y estructural es clave: NIBIO representa el 50\% del test (bosque boreal denso), mientras que RMIT y TUWIEN presentan estructuras de copa radicalmente diferentes.
+FOR-instance~V1~\cite{puliti2023} es un benchmark ULS con anotaciones sem\'anticas e de instancias a nivel de punto. Utilizamos cinco de las seis colecciones (Tabla~\ref{tab:collections}), excluyendo NIBIO2 por sobre-representar el bosque boreal noruego, lo que sesgar\'\i{}a las m\'etricas agregadas. Las densidades var\'\i{}an entre $454$ y $10\,156$~pts/m$^2$ (mediana por colecci\'on: RMIT~$473$, TUWIEN~$1\,406$, CULS~$2\,510$, SCION~$3\,064$, NIBIO~$7\,246$). La diversidad geogr\'afica y estructural es clave: NIBIO representa el 50\% del test (bosque boreal denso), mientras que RMIT y TUWIEN presentan estructuras de copa radicalmente diferentes.
 
 \begin{table}[H]
 \centering
 \caption{Colecciones del dataset FOR-instance V1 utilizadas en este trabajo.}\label{tab:collections}
 \begin{tabular}{llccc}
 \toprule
-C\'odigo & Pa\'is & Tipo de bosque & Plots test & \'Arboles GT \\
+C\'odigo & Pa\'\i{}s & Tipo de bosque & Plots test & \'Arboles GT \\
 \midrule
-NIBIO  & Noruega       & Boreal con\'ifero (\emph{P.~abies})        & 6 & 161 \\
-CULS   & Rep.\ Checa   & Templado con\'ifero (\emph{P.~sylvestris}) & 1 &  20 \\
+NIBIO  & Noruega       & Boreal con\'\i{}fero (\emph{P.~abies})        & 6 & 161 \\
+CULS   & Rep.\ Checa   & Templado con\'\i{}fero (\emph{P.~sylvestris}) & 1 &  20 \\
 TUWIEN & Austria       & Mixto deciduo aluvial                      & 1 &  35 \\
 RMIT   & Australia     & Escler\'ofilo seco (eucaliptos)             & 1 &  64 \\
-SCION  & Nueva Zelanda & Plantaci\'on con\'ifera (\emph{P.~radiata}) & 2 &  43 \\
+SCION  & Nueva Zelanda & Plantaci\'on con\'\i{}fera (\emph{P.~radiata}) & 2 &  43 \\
 \midrule
 \textbf{Total} & & & \textbf{11} & \textbf{323} \\
 \bottomrule
@@ -125,7 +125,7 @@ Se utiliza el split oficial (70\% dev / 30\% test) con subdivisi\'on interna tra
 %% ================================================================
 %%  4. METODOLOG\'IA
 %% ================================================================
-\section{Metodolog\'ia}\label{sec:method}
+\section{Metodolog\'\i{}a}\label{sec:method}
 
 \subsection{Visi\'on general del pipeline}
 
@@ -184,7 +184,7 @@ F1 val (medio)          &                           & 0.272 & 0.371 & 0.377 & 0.
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig_v4_gridsearch_landscape}
-\caption{Paisaje del grid search para el Flujo~D (RF + Density). Barras rojas: valor \'optimo. El radio m\'inimo de copa (2.0\,m) es el par\'ametro m\'as determinante.}\label{fig:gridsearch}
+\caption{Paisaje del grid search para el Flujo~D (RF + Density). Barras rojas: valor \'optimo. El radio m\'\i{}nimo de copa (2.0\,m) es el par\'ametro m\'as determinante.}\label{fig:gridsearch}
 \end{figure}
 
 \subsection{Detalles computacionales y reproducibilidad}
@@ -304,7 +304,7 @@ PointNet++ MSG          & $0.082 \pm 0.162$ & $0.143 \pm 0.109$ & +74\% \\
 
 El an\'alisis factorial (Tabla~\ref{tab:factorial}, Fig.~\ref{fig:decoupling}) confirma que el cambio de seeding (CHM $\rightarrow$ Density) produce una mejora mayor (+47--74\%) que el cambio de preprocesado (baseline $\rightarrow$ RF, +27\%), identificando al segmentador como cuello de botella dominante. La interacci\'on entre ambos factores es relevante: la sem\'antica m\'as limpia de RF produce menos semillas esp\'ureas, resultando en menor sobre-segmentaci\'on (Precision RF+Density: 0.418 vs.\ PN++Density: 0.209).
 
-\paragraph{An\'alisis de significancia estad\'istica.}
+\paragraph{An\'alisis de significancia estad\'\i{}stica.}
 Se emplea un test de permutaci\'on exacto pareado (bilateral, $2^{11}$ permutaciones, $n=11$ plots) con intervalos bootstrap BCa al 95\% ($10\,000$ remuestreos); se prefiere sobre Wilcoxon o $t$-Student por preservar la magnitud de las diferencias y no requerir supuestos distribucionales sobre la distribuci\'on F1, fuertemente asim\'etrica con acumulaci\'on en cero. La Tabla~\ref{tab:significance} resume los resultados: RF supera a PointNet++ con significancia plena bajo CHM ($p=0.016$) y Density ($p=0.020$), y RF+Density supera al baseline ($p=0.016$). El density seeding alcanza significancia marginal ($p=0.096$ para RF, $p=0.066$ para PointNet++) limitada por $n=11$; el efecto es consistente en 8/11~plots, los IC BCa para PointNet++ excluyen el cero, y la reducci\'on de SD de F1 ($0.226 \rightarrow 0.161$ para RF) indica mayor robustez entre tipos de bosque. Validar significancia estricta del seeding requerir\'a FOR-instanceV2~\cite{xiang2025}, con mayor n\'umero de plots y diversidad.
 
 \begin{table}[H]
@@ -345,7 +345,7 @@ La HAG domina la clasificaci\'on RF con el 61.5\% de la importancia Gini acumula
 
 \subsection{El segmentador como cuello de botella}
 
-La Fig.~\ref{fig:vprofile} ilustra c\'omo el Flujo~D asigna correctamente puntos de tronco y ramas en CULS~2, mientras que la proyecci\'on 2D del CHM confundir\'ia estos puntos. El fill volum\'etrico del Watershed~3D es la diferencia estructural decisiva. Cabe notar que la calibraci\'on independiente por flujo (Tabla~\ref{tab:grid-search}) produce par\'ametros \'optimos diferentes: el density seeding prefiere v\'oxeles m\'as gruesos ($0.2$--$0.3$\,m) para acumular suficiente masa de puntos en la banda superior, mientras que el CHM requiere alta resoluci\'on ($0.1$\,m) para preservar los picos locales de la envolvente. Esta divergencia no es un sesgo experimental sino una restricci\'on geom\'etrica de cada estrategia de seeding; la calibraci\'on independiente permite que cada pipeline alcance su techo de rendimiento.
+La Fig.~\ref{fig:vprofile} ilustra c\'omo el Flujo~D asigna correctamente puntos de tronco y ramas en CULS~2, mientras que la proyecci\'on 2D del CHM confundir\'\i{}a estos puntos. El fill volum\'etrico del Watershed~3D es la diferencia estructural decisiva. Cabe notar que la calibraci\'on independiente por flujo (Tabla~\ref{tab:grid-search}) produce par\'ametros \'optimos diferentes: el density seeding prefiere v\'oxeles m\'as gruesos ($0.2$--$0.3$\,m) para acumular suficiente masa de puntos en la banda superior, mientras que el CHM requiere alta resoluci\'on ($0.1$\,m) para preservar los picos locales de la envolvente. Esta divergencia no es un sesgo experimental sino una restricci\'on geom\'etrica de cada estrategia de seeding; la calibraci\'on independiente permite que cada pipeline alcance su techo de rendimiento.
 
 \begin{figure}[H]
 \centering
@@ -363,20 +363,20 @@ Aunque métodos recientes como TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cit
 
 RF obtiene mejores resultados que PointNet++ en las configuraciones evaluadas, particularmente bajo escenarios con alta heterogeneidad estructural entre sitios. Esta ventaja no se explica por sem\'antica superior (brecha en tree~IoU~$<$~1\,pp), sino por mejor interacci\'on con el segmentador: los errores de RF son falsos positivos de borde de copa, mientras que PointNet++ genera falsos positivos aislados en suelo que producen semillas esp\'ureas. Adem\'as, RF se entrena e infiere en CPU (${\sim}16$\,min) sin requerir GPU.
 
-PointNet++ muestra ca\'ida severa en RMIT y TUWIEN (F1\,=\,0.000 con CHM), debido a que su submuestreo global de $8\,192$ puntos no captura adecuadamente sitios con densidades y morfolog\'ias muy diferentes a los datos de entrenamiento (dominados por NIBIO boreal). RF, al operar sobre features locales, generaliza mejor entre tipos de bosque diversos.
+PointNet++ muestra ca\'\i{}da severa en RMIT y TUWIEN (F1\,=\,0.000 con CHM), debido a que su submuestreo global de $8\,192$ puntos no captura adecuadamente sitios con densidades y morfolog\'\i{}as muy diferentes a los datos de entrenamiento (dominados por NIBIO boreal). RF, al operar sobre features locales, generaliza mejor entre tipos de bosque diversos.
 
 Esta ventaja se observa dentro de las configuraciones evaluadas y no debe leerse como superioridad general de clasificadores clásicos sobre deep learning (cf.\ §7.3); aún así, refuerza la hipótesis central de desacoplamiento, ya que mejoras semánticas no se traducen en mejoras proporcionales a nivel de instancia.
 
 \subsection{Limitaciones}
 
 \paragraph{Tama\~no y balance del conjunto de evaluaci\'on.}
-El conjunto de test comprende 11~plots y 323~\'arboles GT, con una concentraci\'on significativa en un solo tipo de bosque: NIBIO (boreal con\'ifero) aporta 6 de 11 plots (${\sim}50\%$) y 161 de 323 \'arboles (${\sim}50\%$), mientras que CULS, TUWIEN y RMIT contribuyen un \'unico plot cada uno. Esta distribuci\'on introduce dos efectos cuantificables: (i)~alta varianza en las estimaciones por sitio --- los intervalos de confianza bootstrap al 95\% de F1 para el mejor flujo (D) abarcan $[0.128, 0.314]$, reflejando que sitios individuales como CULS (F1\,=\,0.629) o NIBIO\_5 (F1\,=\,0.000) dominan la dispersi\'on; y (ii)~posible sesgo en las m\'etricas agregadas hacia el comportamiento en bosque boreal denso, que es el escenario m\'as desafiante para todos los m\'etodos.
+El conjunto de test comprende 11~plots y 323~\'arboles GT, con una concentraci\'on significativa en un solo tipo de bosque: NIBIO (boreal con\'\i{}fero) aporta 6 de 11 plots (${\sim}50\%$) y 161 de 323 \'arboles (${\sim}50\%$), mientras que CULS, TUWIEN y RMIT contribuyen un \'unico plot cada uno. Esta distribuci\'on introduce dos efectos cuantificables: (i)~alta varianza en las estimaciones por sitio --- los intervalos de confianza bootstrap al 95\% de F1 para el mejor flujo (D) abarcan $[0.128, 0.314]$, reflejando que sitios individuales como CULS (F1\,=\,0.629) o NIBIO\_5 (F1\,=\,0.000) dominan la dispersi\'on; y (ii)~posible sesgo en las m\'etricas agregadas hacia el comportamiento en bosque boreal denso, que es el escenario m\'as desafiante para todos los m\'etodos.
 
 \paragraph{An\'alisis de errores de segmentaci\'on.}
 El presente trabajo cuantifica el rendimiento del segmentador mediante F1, precisi\'on, recall y coverage, pero no descompone sistem\'aticamente los errores en sobre-segmentaci\'on (un \'arbol GT fragmentado en m\'ultiples predicciones) e infra-segmentaci\'on (m\'ultiples \'arboles GT fusionados en una sola predicci\'on). Si bien las columnas \texttt{over\_seg} y \texttt{under\_seg} se registran en los resultados por plot, un an\'alisis formal de la naturaleza del error --- incluyendo la relaci\'on entre tama\~no de copa, densidad local y tipo de error predominante --- queda fuera del alcance de este estudio y se propone como trabajo futuro.
 
 \paragraph{Otras limitaciones.}
-PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; una b\'usqueda exhaustiva podr\'ia mejorar su rendimiento. Por esta raz\'on, las comparaciones entre RF y PointNet++ deben interpretarse principalmente como observaciones dentro del pipeline experimental evaluado y no como una comparaci\'on definitiva entre paradigmas cl\'asicos y deep learning para segmentaci\'on forestal. Las conclusiones sobre el cuello de botella son espec\'ificas al Watershed~3D volum\'etrico; otros segmentadores (TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024}) podr\'ian mostrar una relaci\'on diferente. No obstante, los patrones de error observados --- especialmente la fusi\'on de copas adyacentes en canopias continuas --- sugieren una dificultad geom\'etrica m\'as amplia para la separaci\'on de instancias en ULS denso. Los resultados son espec\'ificos a datos ULS ($454$--$10\,156$~pts/m$^2$); las conclusiones presentadas deben interpretarse espec\'ificamente dentro del contexto de nubes ULS densas y no como una caracterizaci\'on universal del comportamiento de pipelines ITS sobre todas las modalidades LiDAR. Asimismo, este trabajo no busca establecer una comparaci\'on cuantitativa exhaustiva frente a arquitecturas estado-del-arte recientes, sino proporcionar una evaluaci\'on factorial interpretable orientada a identificar la distribuci\'on estructural del error dentro del pipeline ITS.
+PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; una b\'usqueda exhaustiva podr\'\i{}a mejorar su rendimiento. Por esta raz\'on, las comparaciones entre RF y PointNet++ deben interpretarse principalmente como observaciones dentro del pipeline experimental evaluado y no como una comparaci\'on definitiva entre paradigmas cl\'asicos y deep learning para segmentaci\'on forestal. Las conclusiones sobre el cuello de botella son espec\'\i{}ficas al Watershed~3D volum\'etrico; otros segmentadores (TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024}) podr\'\i{}an mostrar una relaci\'on diferente. No obstante, los patrones de error observados --- especialmente la fusi\'on de copas adyacentes en canopias continuas --- sugieren una dificultad geom\'etrica m\'as amplia para la separaci\'on de instancias en ULS denso. Los resultados son espec\'\i{}ficos a datos ULS ($454$--$10\,156$~pts/m$^2$); las conclusiones presentadas deben interpretarse espec\'\i{}ficamente dentro del contexto de nubes ULS densas y no como una caracterizaci\'on universal del comportamiento de pipelines ITS sobre todas las modalidades LiDAR. Asimismo, este trabajo no busca establecer una comparaci\'on cuantitativa exhaustiva frente a arquitecturas estado-del-arte recientes, sino proporcionar una evaluaci\'on factorial interpretable orientada a identificar la distribuci\'on estructural del error dentro del pipeline ITS.
 
 %% ================================================================
 %%  8. CONCLUSIONES
