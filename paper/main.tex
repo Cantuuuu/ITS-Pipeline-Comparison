@@ -188,12 +188,7 @@ F1 val (medio)          &                           & 0.272 & 0.371 & 0.377 & 0.
 \end{figure}
 
 \subsection{Detalles computacionales y reproducibilidad}
-Todos los experimentos fueron implementados en Python utilizando Open3D, Scikit-learn y PyTorch. El entrenamiento de PointNet++ se realizó utilizando una GPU NVIDIA RTX~3060 con 12\,GB de VRAM, mientras que los pipelines basados en Random Forest fueron ejecutados completamente en CPU.
-
-El entrenamiento de RF requirió aproximadamente 16 minutos por ejecución, mientras que PointNet++ requirió aproximadamente 2.5 horas de entrenamiento para 100 épocas bajo la configuración evaluada. Los experimentos utilizaron semillas fijas para train/validation split y calibración de hiperparámetros.
-
-El código fuente completo, scripts de reproducción y configuraciones experimentales están disponibles públicamente en:
-\url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}
+Implementación en Python (Open3D, Scikit-learn, PyTorch). RF se entrena en CPU (${\sim}16$\,min/ejecución); PointNet++ en GPU NVIDIA RTX~3060 12\,GB (${\sim}2.5$\,h, 100 épocas). Código, scripts y configuraciones: \url{https://github.com/Cantuuuu/ITS-Pipeline-Comparison}.
 
 %% ================================================================
 %%  5. PROTOCOLO DE EVALUACI\'ON
