@@ -224,17 +224,17 @@ La Tabla~\ref{tab:results-agg} presenta los resultados sobre el conjunto de test
 
 \begin{table}[H]
 \centering
-\caption{Resultados agregados (test, IoU~3D~$\geq 0.5$, promedio sobre 11~plots).}\label{tab:results-agg}
+\caption{Resultados agregados (test, IoU~3D~$\geq 0.5$, media $\pm$ SD sobre $n=11$~plots).}\label{tab:results-agg}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llccccccc}
 \toprule
 Flujo & Seeding & sem mIoU & tree IoU & sem F1 & inst Prec & inst Recall & inst F1 & Coverage \\
 \midrule
-A --- Sin preproc.       & CHM     & --    & --    & --    & 0.138 & 0.133 & 0.112 & 0.133 \\
-B --- Random Forest      & CHM     & 0.985 & 0.990 & 0.996 & 0.394 & 0.110 & 0.142 & 0.110 \\
-C --- PointNet++ MSG     & CHM     & 0.974 & 0.982 & 0.994 & 0.172 & 0.060 & 0.082 & 0.060 \\
-D --- Random Forest      & Density & 0.985 & 0.990 & 0.996 & 0.418 & 0.150 & \textbf{0.209} & 0.150 \\
-E --- PointNet++ MSG     & Density & 0.974 & 0.982 & 0.994 & 0.209 & 0.118 & 0.143 & 0.118 \\
+A --- Sin preproc.       & CHM     & --    & --    & --    & $0.138 \pm 0.149$ & $0.133 \pm 0.143$ & $0.112 \pm 0.116$ & $0.133 \pm 0.143$ \\
+B --- Random Forest      & CHM     & 0.985 & 0.990 & 0.996 & $0.394 \pm 0.402$ & $0.110 \pm 0.118$ & $0.142 \pm 0.226$ & $0.110 \pm 0.118$ \\
+C --- PointNet++ MSG     & CHM     & 0.974 & 0.982 & 0.994 & $0.172 \pm 0.259$ & $0.060 \pm 0.079$ & $0.082 \pm 0.162$ & $0.060 \pm 0.079$ \\
+D --- Random Forest      & Density & 0.985 & 0.990 & 0.996 & $0.418 \pm 0.291$ & $0.150 \pm 0.097$ & $\mathbf{0.209 \pm 0.161}$ & $0.150 \pm 0.097$ \\
+E --- PointNet++ MSG     & Density & 0.974 & 0.982 & 0.994 & $0.209 \pm 0.148$ & $0.118 \pm 0.076$ & $0.143 \pm 0.109$ & $0.118 \pm 0.076$ \\
 \bottomrule
 \end{tabular}%
 }
