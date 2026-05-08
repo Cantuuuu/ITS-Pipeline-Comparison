@@ -387,11 +387,7 @@ Mediante un dise\~no factorial $3 \times 2$ sobre FOR-instance~V1, demostramos q
 
 La combinación RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una línea base robusta y eficiente. La brecha entre calidad semántica y calidad de instancia sugiere que las mejoras más impactantes en ITS vendrán de segmentadores capaces de separar copas adyacentes en canopias densas mediante priors geométricos, arquitecturas end-to-end o estrategias de seeding más adaptativas.
 
-Estos resultados no implican que Watershed~3D represente el límite superior del desempeño posible, sino que evidencian cómo la continuidad geométrica de las copas puede limitar la separación de instancias incluso cuando la clasificación semántica es altamente precisa.
-
-Más que proponer un nuevo método competitivo estado-del-arte, este trabajo aporta una disección experimental interpretable del pipeline ITS bajo ambientes ULS densos.
-
-Trabajo futuro incluye comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, y estrategias de seeding adaptativas que combinen CHM y densidad seg\'un la variabilidad local de altura, as\'i como un an\'alisis detallado de la naturaleza del error (sobre- vs.\ infra-segmentaci\'on) por tipo de bosque y su relaci\'on con la geometr\'ia de copa.
+Más que proponer un método competitivo, este trabajo aporta una disección experimental interpretable del pipeline ITS bajo ULS denso. Trabajo futuro: comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, seeding adaptativo CHM/densidad según variabilidad local de altura, y análisis formal de sobre- vs.\ infra-segmentación por tipo de bosque.
 %% ================================================================
 %%  REFERENCIAS
 %% ================================================================
