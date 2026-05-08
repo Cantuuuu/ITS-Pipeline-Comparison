@@ -242,6 +242,7 @@ E --- PointNet++ MSG     & Density & 0.974 & 0.982 & 0.994 \\
 \begin{table}[H]
 \centering
 \caption{Resultados de segmentaci\'on de instancias (test, IoU~3D~$\geq 0.5$, media $\pm$ SD sobre $n=11$~plots).}\label{tab:results-inst}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{llcccc}
 \toprule
 Flujo & Seeding & inst Prec & inst Recall & inst F1 & Coverage \\
@@ -252,8 +253,10 @@ C --- PointNet++ MSG     & CHM     & $0.172 \pm 0.259$ & $0.060 \pm 0.079$ & $0.
 D --- Random Forest      & Density & $0.418 \pm 0.291$ & $0.150 \pm 0.097$ & $\mathbf{0.209 \pm 0.161}$ & $0.150 \pm 0.097$ \\
 E --- PointNet++ MSG     & Density & $0.209 \pm 0.148$ & $0.118 \pm 0.076$ & $0.143 \pm 0.109$ & $0.118 \pm 0.076$ \\
 \bottomrule
-\multicolumn{6}{l}{\footnotesize $^\dagger$SD $>$ media en algunos flujos refleja distribuciones de F1 fuertemente asim\'etricas con acumulaci\'on en cero (plots donde el segmentador falla completamente); v\'ease mediana en resultados complementarios.}
-\end{tabular}
+\end{tabular}%
+}
+\vspace{1mm}
+{\footnotesize $^\dagger$SD $>$ media en algunos flujos refleja distribuciones de F1 fuertemente asim\'etricas con acumulaci\'on en cero; v\'ease mediana en resultados complementarios.}
 \end{table}
 
 Ambos clasificadores logran tree~IoU~$>$~0.97, pero esta calidad no se traduce en instancia (F1 m\'aximo $0.209 \pm 0.161$), evidenciando al segmentador como cuello de botella. La alta dispersi\'on entre plots (SD comparable o superior a la media en todos los flujos) refleja la heterogeneidad estructural entre los cinco tipos de bosque evaluados. Notablemente, el density seeding reduce la variabilidad de RF (SD: $0.226 \rightarrow 0.161$), sugiriendo mayor robustez entre sitios.
