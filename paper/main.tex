@@ -370,9 +370,7 @@ RF obtiene mejores resultados que PointNet++ en las configuraciones evaluadas, p
 
 PointNet++ muestra ca\'ida severa en RMIT y TUWIEN (F1\,=\,0.000 con CHM), debido a que su submuestreo global de $8\,192$ puntos no captura adecuadamente sitios con densidades y morfolog\'ias muy diferentes a los datos de entrenamiento (dominados por NIBIO boreal). RF, al operar sobre features locales, generaliza mejor entre tipos de bosque diversos.
 
-Aunque RF supera consistentemente a PointNet++ dentro de las configuraciones evaluadas, estos resultados no deben interpretarse como una superioridad general de clasificadores clásicos sobre arquitecturas profundas para segmentación semántica forestal. PointNet++ fue evaluado bajo una configuración limitada de hiperparámetros y entrenamiento, por lo que configuraciones más extensivas o datasets de entrenamiento mayores podrían modificar parcialmente esta relación.
-
-Sin embargo, incluso bajo esta limitación, los resultados siguen mostrando que mejoras semánticas moderadas no necesariamente se traducen en mejoras proporcionales a nivel de instancia, reforzando la hipótesis central de desacoplamiento entre calidad semántica y separación geométrica de individuos.
+Esta ventaja se observa dentro de las configuraciones evaluadas y no debe leerse como superioridad general de clasificadores clásicos sobre deep learning (cf.\ §7.3); aún así, refuerza la hipótesis central de desacoplamiento, ya que mejoras semánticas no se traducen en mejoras proporcionales a nivel de instancia.
 
 \subsection{Limitaciones}
 
