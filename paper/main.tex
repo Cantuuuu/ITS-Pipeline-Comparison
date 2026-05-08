@@ -89,9 +89,7 @@ Los m\'etodos cl\'asicos emplean caracter\'isticas geom\'etricas dise\~nadas man
 \subsection{Benchmarks}
 
 FOR-instance~V1~\cite{puliti2023} re'une parcelas ULS de cinco tipos de bosque distribuidos en cuatro continentes, con anotaciones sem'anticas y de instancia a nivel de punto. FOR-instanceV2~\cite{xiang2025} ampl'ia este recurso; en este trabajo evaluamos sobre V1 para mantener la comparabilidad. NeonTreeEvaluation~\cite{weinstein2021} ofrece datos multimodales, pero est'a limitado a ecosistemas de Norteam'erica.
-Los enfoques recientes de segmentación end-to-end han demostrado mejoras importantes en benchmarks forestales mediante arquitecturas altamente acopladas capaces de integrar representación semántica y agrupamiento de instancias dentro de un mismo modelo. Métodos recientes como TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024} y ForestFormer3D~\cite{xiang2025} representan esta tendencia hacia modelos de segmentación altamente integrados y orientados a maximizar desempeño absoluto.
-
-Sin embargo, esta integración también dificulta aislar experimentalmente qué componente del pipeline domina realmente el error final de segmentación. En consecuencia, aunque dichos métodos pueden alcanzar mejores métricas globales, ofrecen menor interpretabilidad respecto a la contribución relativa del preprocesado semántico y de los mecanismos geométricos de separación de instancias.
+Métodos end-to-end recientes como TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024} y ForestFormer3D~\cite{xiang2025} integran representación semántica y agrupamiento de instancias en un mismo modelo, alcanzando mejores métricas globales pero dificultando aislar qué componente domina el error final.
 
 %% ================================================================
 %%  3. DATASET
