@@ -387,6 +387,8 @@ Más que representar un fracaso aislado del pipeline evaluado, este desempeño e
 %% ================================================================
 \section{Conclusiones}\label{sec:conclusions}
 
+Mediante un dise\~no factorial $3 \times 2$ sobre FOR-instance~V1, demostramos que: (1)~el segmentador de instancias, no el preprocesado sem\'antico, es el cuello de botella principal del pipeline ITS; (2)~Random Forest con features geom\'etricas supera significativamente a PointNet++ MSG en todas las combinaciones evaluadas ($p=0.016$, test de permutaci\'on exacto), sin requerir GPU; y (3)~el seeding por densidad de copa mejora consistentemente al seeding CHM (+47\% para RF, +74\% para PointNet++), con significancia marginal ($p=0.096$ y $p=0.066$, respectivamente) limitada por el tama\~no muestral del benchmark ($n=11$ plots), siendo especialmente efectivo en bosques densos de altura uniforme.
+
 La combinación RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una línea base robusta y eficiente. La brecha entre calidad semántica y calidad de instancia sugiere que las mejoras más impactantes en ITS vendrán de segmentadores capaces de separar copas adyacentes en canopias densas mediante priors geométricos, arquitecturas end-to-end o estrategias de seeding más adaptativas.
 
 Estos resultados no implican que Watershed~3D represente el límite superior del desempeño posible, sino que evidencian cómo la continuidad geométrica de las copas puede limitar la separación de instancias incluso cuando la clasificación semántica es altamente precisa.
