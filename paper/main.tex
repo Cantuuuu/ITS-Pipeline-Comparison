@@ -307,7 +307,7 @@ La HAG domina la clasificaci\'on RF con el 61.5\% de la importancia Gini acumula
 
 \subsection{El segmentador como cuello de botella}
 
-La Fig.~\ref{fig:vprofile} ilustra c\'omo el Flujo~D asigna correctamente puntos de tronco y ramas en CULS~2, mientras que la proyecci\'on 2D del CHM confundir\'ia estos puntos. El fill volum\'etrico del Watershed~3D es la diferencia estructural decisiva.
+La Fig.~\ref{fig:vprofile} ilustra c\'omo el Flujo~D asigna correctamente puntos de tronco y ramas en CULS~2, mientras que la proyecci\'on 2D del CHM confundir\'ia estos puntos. El fill volum\'etrico del Watershed~3D es la diferencia estructural decisiva. Cabe notar que la calibraci\'on independiente por flujo (Tabla~\ref{tab:grid-search}) produce par\'ametros \'optimos diferentes: el density seeding prefiere v\'oxeles m\'as gruesos ($0.2$--$0.3$\,m) para acumular suficiente masa de puntos en la banda superior, mientras que el CHM requiere alta resoluci\'on ($0.1$\,m) para preservar los picos locales de la envolvente. Esta divergencia no es un sesgo experimental sino una restricci\'on geom\'etrica de cada estrategia de seeding; la calibraci\'on independiente permite que cada pipeline alcance su techo de rendimiento.
 
 \begin{figure}[H]
 \centering
