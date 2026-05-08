@@ -1,0 +1,7 @@
+excluded_site,n_plots,rank_1,rank_2,rank_3,rank_4,rank_5,ranking_changed
+none,11,rf_density,pointnet2_density,rf,baseline,pointnet2,False
+CULS,10,rf_density,pointnet2_density,baseline,rf,pointnet2,True
+NIBIO,5,rf_density,rf,pointnet2_density,baseline,pointnet2,True
+RMIT,10,rf_density,rf,pointnet2_density,baseline,pointnet2,True
+SCION,9,rf_density,rf,pointnet2_density,baseline,pointnet2,True
+TUWIEN,10,rf_density,rf,pointnet2_density,baseline,pointnet2,True
