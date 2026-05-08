@@ -6,10 +6,11 @@ Documentación generada automáticamente — rama `gabocorretions` vs `master`.
 
 ## Resumen ejecutivo
 
-Se agregaron dos módulos de análisis estadístico al paquete `forest_its/evaluation/` y se generaron siete archivos CSV de resultados en `results/`. No se modificó ningún archivo preexistente.
+Se agregaron dos módulos de análisis estadístico, se modificó `paper/main.tex` respondiendo a revisión, y se generaron siete archivos CSV de resultados.
 
 | Tipo | Archivo | Estado |
 |------|---------|--------|
+| Paper | `paper/main.tex` | Modificado (+55 / −13 líneas) |
 | Código | `forest_its/evaluation/statistical_tests.py` | Nuevo |
 | Código | `forest_its/evaluation/site_sensitivity.py` | Nuevo |
 | Resultado | `results/descriptive_stats_test.csv` | Nuevo |
@@ -313,7 +314,80 @@ Responde: *¿Introduce NIBIO un sesgo cuantificable y en qué magnitud?*
 
 ---
 
-## 4. Implicaciones para el paper
+## 4. Cambios en `paper/main.tex`
+
+### Contexto
+
+Commit `a1bdbba` — responde dos puntos de revisión:
+- **Punto 3:** El test set es pequeño (11 plots, 323 árboles) y NIBIO pesa mucho (≈50%). El revisor pide reconocer esto y mostrar variabilidad.
+- **Punto 4:** Las mejoras porcentuales (+47%, +74%) se reportaban sin pruebas formales. El revisor pide p-values e intervalos.
+
+### Cambio 1 — Tablas 3 y 4: valores con media ± SD
+
+Todos los valores de métricas de instancia ahora muestran `media ± desviación estándar` en lugar de solo la media. Afecta la Tabla 3 (resultados agregados) y la Tabla 4 (análisis factorial).
+
+**Antes:**
+```latex
+& 0.138 & 0.133 & 0.112 & 0.133 \\
+& \textbf{0.209} &
+```
+
+**Después:**
+```latex
+& $0.138 \pm 0.149$ & $0.133 \pm 0.143$ & $0.112 \pm 0.116$ & $0.133 \pm 0.143$ \\
+& $\mathbf{0.209 \pm 0.161}$ &
+```
+
+El caption de la Tabla 3 también se actualizó: `"promedio sobre 11 plots"` → `"media $\pm$ SD sobre $n=11$ plots"`.
+
+El párrafo posterior a la tabla agrega: la alta dispersión entre plots (SD comparable a la media) refleja la heterogeneidad estructural del benchmark, y el density seeding reduce la variabilidad de RF (SD: 0.226 → 0.161).
+
+### Cambio 2 — Párrafo nuevo: análisis de significancia estadística
+
+Se añade un párrafo `\paragraph{Análisis de significancia estadística.}` en la sección de análisis factorial (§6.4) que explica la elección del test de permutación exacto sobre Wilcoxon y t-Student, con justificación metodológica detallada.
+
+### Cambio 3 — Tabla 5 nueva: significancia estadística
+
+Nueva tabla `\label{tab:significance}` con columnas: Comparación, Δ̄ F1, SD(Δ), p_perm, IC 95% BCa (Δ), Plots con mejora.
+
+| Comparación | Δ̄ F1 | p_perm | IC BCa | Mejora |
+|-------------|-------|--------|--------|--------|
+| RF: CHM→Density | +0.067 | 0.096* | [−0.004, +0.129] | 8/11 |
+| PN++: CHM→Density | +0.061 | 0.066* | [+0.003, +0.110] | 9/11 |
+| Baseline→RF+Density | +0.097 | 0.016** | [+0.027, +0.161] | 9/11 |
+| RF vs PN++ (CHM) | −0.060 | 0.016** | — | — |
+| RF vs PN++ (Density) | −0.066 | 0.020** | — | — |
+
+`**` p<0.05, `*` p<0.10.
+
+### Cambio 4 — §7.3 Limitaciones: tres sub-secciones
+
+El párrafo genérico de limitaciones se reemplaza por tres `\paragraph{}` diferenciados:
+
+**`\paragraph{Tamaño y balance del conjunto de evaluación.}`**
+Cuantifica explícitamente la concentración de NIBIO: 6/11 plots (~50%) y 161/323 árboles (~50%). Reporta el IC BCa 95% de F1 para el mejor flujo: [0.128, 0.314]. Menciona que sitios individuales como CULS (F1=0.629) y NIBIO_5 (F1=0.000) dominan la dispersión.
+
+**`\paragraph{Poder estadístico.}`**
+Reconoce explícitamente que con n=11 el test de permutación exacto solo alcanza significancia marginal para el density seeding (p=0.096 RF, p=0.066 PN++). Señala que los intervalos BCa para PN++ excluyen el cero y que la mejora es consistente en 8–9/11 plots. Indica que FOR-instanceV2 es necesario para confirmar significancia estricta. Las comparaciones entre preprocesadores sí alcanzan significancia plena (p=0.016).
+
+**`\paragraph{Otras limitaciones.}`**
+Conserva el contenido anterior: PointNet++ con única configuración, conclusiones específicas al Watershed 3D volumétrico, especificidad a datos ULS.
+
+### Cambio 5 — §8 Conclusiones: p-values integrados
+
+La afirmación `"supera a PointNet++ MSG"` se actualiza a `"supera significativamente a PointNet++ MSG ($p=0.016$, test de permutación exacto)"`.
+
+La afirmación sobre density seeding se actualiza a `"con significancia marginal ($p=0.096$ y $p=0.066$, respectivamente) limitada por el tamaño muestral del benchmark ($n=11$ plots)"`.
+
+### Qué NO cambió
+
+- Ninguna figura
+- Ningún resultado numérico (los valores son los mismos; solo se agregó SD)
+- Ninguna sección fue eliminada
+
+---
+
+## 5. Implicaciones para el paper
 
 Los análisis confirman y matizan las conclusiones del paper:
 
