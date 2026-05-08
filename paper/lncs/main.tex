@@ -199,11 +199,11 @@ Implementación en Python (Open3D, Scikit-learn, PyTorch). RF se entrena en CPU 
 
 \textbf{Instancias.} Las instancias predichas $\{P_i\}$ se emparejan con las GT $\{G_j\}$ mediante matching \emph{greedy} por IoU~3D punto a punto con umbral $\tau = 0{,}5$, siguiendo~\cite{henrich2024,wielgosz2024}:
 
-\begin{equation}
+\begin{equation}\label{eq:iou3d}
 \text{IoU}_{3D}(P_i, G_j) = \frac{|P_i \cap G_j|}{|P_i \cup G_j|}
 \end{equation}
 
-Se computan precisi\'on, recall, F1 y \emph{coverage} (fracci\'on de \'arboles GT con al menos una predicci\'on con IoU$_{3D} \geq \tau$, sin matching \'unico): la brecha Coverage~$-$~Recall indica fragmentaci\'on de copas. Reportar ambas tareas permite aislar en cu\'al etapa se concentra el error.
+A partir del IoU~3D definido en la Ec.~\eqref{eq:iou3d}, se computan precisi\'on, recall, F1 y \emph{coverage} (fracci\'on de \'arboles GT con al menos una predicci\'on con IoU$_{3D} \geq \tau$, sin matching \'unico): la brecha Coverage~$-$~Recall indica fragmentaci\'on de copas. Reportar ambas tareas permite aislar en cu\'al etapa se concentra el error.
 
 %% ================================================================
 %%  6. RESULTADOS
