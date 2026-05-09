@@ -149,7 +149,7 @@ Cada punto se representa mediante 27 features geom\'etricas: 8 descriptores eige
 
 \subsection{Flujo~C --- PointNet++ MSG}
 
-Se emplea PointNet++ MSG~\cite{qi2017} con cuatro m\'odulos Set Abstraction y cuatro Feature Propagation~\cite{yan2019pointnet2pytorch}. La entrada son 5 dimensiones por punto ($XYZ$ + HAG\_norm + intensidad), garantizando equivalencia de informaci\'on con el Flujo~B. La red se entrena durante 100 \'epocas con submuestreos de $8\,192$ puntos. En inferencia se realizan m\'ultiples pasadas con promediado de probabilidades; los puntos residuales se etiquetan por interpolaci\'on KNN ($k=3$).
+Se emplea PointNet++ con agrupamiento multiescala (multi-scale grouping, MSG)~\cite{qi2017} con cuatro m\'odulos Set Abstraction y cuatro Feature Propagation~\cite{yan2019pointnet2pytorch}. La entrada son 5 dimensiones por punto ($XYZ$ + HAG\_norm + intensidad), garantizando equivalencia de informaci\'on con el Flujo~B. La red se entrena durante 100 \'epocas con submuestreos de $8\,192$ puntos. En inferencia se realizan m\'ultiples pasadas con promediado de probabilidades; los puntos residuales se etiquetan por interpolaci\'on KNN ($k=3$).
 
 \subsection{Segmentador de instancias --- Watershed 3D volum\'etrico}\label{sec:watershed}
 
