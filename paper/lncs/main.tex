@@ -55,7 +55,7 @@ Los inventarios forestales automatizados a nivel de \'arbol individual son esenc
 
 
 
-Los pipelines de ITS suelen operar en dos etapas encadenadas: un clasificador sem\'antico que a\'\i{}sla los puntos de \'arbol respecto al suelo, sotobosque y ruido, seguido de un segmentador de instancias que asigna a cada punto de \'arbol un identificador \'unico. Los m\'etodos de aprendizaje profundo, como PointNet++~\cite{qi2017}, han generado altas expectativas respecto a la calidad sem\'antica; sin embargo, su ventaja pr\'actica frente a clasificadores cl\'asicos como Random Forest en el contexto espec\'\i{}fico del preprocesado para ITS a\'un no est\'a clara. Al mismo tiempo, los m\'etodos volum\'etricos de Watershed~3D han evolucionado m\'as all\'a del enfoque cl\'asico 2D basado en CHM~\cite{dalponte2016}, permitiendo explotar directamente la densidad vertical de puntos. A pesar de estos avances, el impacto relativo de cada etapa sobre el rendimiento extremo a extremo rara vez se ha aislado experimentalmente~\cite{qi2017,breiman2001,puliti2023}, la mayoría de los trabajos recientes en ITS se enfocan principalmente en incrementar el desempeño global mediante arquitecturas end-to-end cada vez más complejas. Sin embargo, al acoplar estrechamente la clasificación semántica y la segmentación de instancias dentro de modelos tipo black-box, resulta difícil identificar cuál de las etapas domina realmente el error final del pipeline.
+Los pipelines de ITS suelen operar en dos etapas encadenadas: un clasificador sem\'antico que a\'\i{}sla los puntos de \'arbol respecto al suelo, sotobosque y ruido, seguido de un segmentador de instancias que asigna a cada punto de \'arbol un identificador \'unico. Los m\'etodos de aprendizaje profundo, como PointNet++~\cite{qi2017}, han generado altas expectativas respecto a la calidad sem\'antica; sin embargo, su ventaja pr\'actica frente a clasificadores cl\'asicos como Random Forest en el contexto espec\'\i{}fico del preprocesado para ITS a\'un no est\'a clara. Al mismo tiempo, los m\'etodos volum\'etricos de Watershed~3D han evolucionado m\'as all\'a del enfoque cl\'asico 2D basado en el modelo de altura del dosel (canopy height model, CHM)~\cite{dalponte2016}, permitiendo explotar directamente la densidad vertical de puntos. A pesar de estos avances, el impacto relativo de cada etapa sobre el rendimiento extremo a extremo rara vez se ha aislado experimentalmente~\cite{qi2017,breiman2001,puliti2023}, la mayoría de los trabajos recientes en ITS se enfocan principalmente en incrementar el desempeño global mediante arquitecturas end-to-end cada vez más complejas. Sin embargo, al acoplar estrechamente la clasificación semántica y la segmentación de instancias dentro de modelos tipo black-box, resulta difícil identificar cuál de las etapas domina realmente el error final del pipeline.
 
 Esto motiva una pregunta fundamental: en ambientes forestales ULS densos, ¿el principal límite del ITS moderno proviene de la clasificación semántica o de la separación de instancias?
 
@@ -101,7 +101,7 @@ FOR-instance~V1~\cite{puliti2023} es un benchmark ULS con anotaciones sem\'antic
 
 \begin{table}[H]
 \centering
-\caption{Colecciones del dataset FOR-instance V1 utilizadas en este trabajo.}\label{tab:collections}
+\caption{Colecciones del dataset FOR-instance V1 utilizadas en este trabajo. GT: \emph{ground truth} (anotaciones de referencia).}\label{tab:collections}
 \begin{tabular}{llccc}
 \toprule
 C\'odigo & Pa\'\i{}s & Tipo de bosque & Plots test & \'Arboles GT \\
