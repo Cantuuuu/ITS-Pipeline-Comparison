@@ -52,7 +52,7 @@ La segmentaci\'on autom\'atica de \'arboles individuales (ITS) en nubes de punto
 
 \subsection{Motivaci\'on}
 
-Los inventarios forestales automatizados a nivel de \'arbol individual son esenciales para la estimaci\'on de carbono almacenado, el monitoreo de la biodiversidad y la silvicultura de precisi\'on. El escaneo l\'aser UAV (ULS) proporciona densidades de puntos entre uno y dos \'ordenes de magnitud superiores a las del ALS convencional ($\sim$7{,}000~pts/m$^2$ vs.\ $\sim$5~pts/m$^2$), lo que permite caracterizar \'arboles individuales, incluidas sus copas, troncos, ramas y sotobosque. Sin embargo, la segmentaci\'on autom\'atica de \'arboles individuales (ITS) en datos ULS sigue siendo un problema abierto debido al ruido en los modelos de altura, la ambig\"uedad entre copa y sotobosque, y la variabilidad estructural entre tipos de bosque, particularmente en bosques densos donde la alta densidad de puntos y la continuidad vertical hacen que múltiples árboles compartan regiones espaciales continuas.
+Los inventarios forestales automatizados a nivel de \'arbol individual son esenciales para la estimaci\'on de carbono almacenado, el monitoreo de la biodiversidad y la silvicultura de precisi\'on. El escaneo l\'aser desde veh\'\i{}culos a\'ereos no tripulados (UAV laser scanning, ULS) proporciona densidades de puntos entre uno y dos \'ordenes de magnitud superiores a las del escaneo l\'aser aerotransportado convencional (airborne laser scanning, ALS) ($\sim$7{,}000~pts/m$^2$ vs.\ $\sim$5~pts/m$^2$), lo que permite caracterizar \'arboles individuales, incluidas sus copas, troncos, ramas y sotobosque. Sin embargo, la segmentaci\'on autom\'atica de \'arboles individuales (ITS) en datos ULS sigue siendo un problema abierto debido al ruido en los modelos de altura, la ambig\"uedad entre copa y sotobosque, y la variabilidad estructural entre tipos de bosque, particularmente en bosques densos donde la alta densidad de puntos y la continuidad vertical hacen que múltiples árboles compartan regiones espaciales continuas.
 
 
 
@@ -141,7 +141,7 @@ Los flujos comparten una arquitectura de dos etapas: (1)~preprocesado sem\'antic
 
 \subsection{Flujo~A --- Sin preprocesado (baseline)}
 
-La nube completa (excluyendo clases $\{0, 3\}$) se pasa directamente al segmentador. Todos los flujos comparten el c\'alculo de HAG a partir de un DTM interpolado sobre puntos de suelo, truncada a $[0, 50]$\,m.
+La nube completa (excluyendo clases $\{0, 3\}$) se pasa directamente al segmentador. Todos los flujos comparten el c\'alculo de la altura sobre el suelo (height above ground, HAG) a partir de un modelo digital de terreno (digital terrain model, DTM) interpolado sobre puntos de suelo, truncada a $[0, 50]$\,m.
 
 \subsection{Flujo~B --- Random Forest sobre features geom\'etricas}
 
