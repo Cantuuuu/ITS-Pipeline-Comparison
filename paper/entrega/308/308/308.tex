@@ -19,7 +19,7 @@
 %% ----------------------------------------------------------------
 %%  TITLE & AUTHORS
 %% ----------------------------------------------------------------
-\title{La segmentaci\'on de instancias, no la sem\'antica, es el factor limitante en la detecci\'on de \'arboles individuales en nubes de puntos ULS densas}
+\title{Instance Segmentation, Not Semantics, Limits Individual Tree Detection in Dense ULS Point Clouds}
 
 \author{Arturo~Cant\'u~Olivares\inst{1}\orcidID{0009-0007-2531-2691} \and
 Diego~Sebastian~Cruz~Cervantes\inst{1}\orcidID{0009-0003-4156-972X} \and
@@ -28,7 +28,7 @@ Jes\'us~Gabriel~Gudi\~no~Lara\inst{1}\orcidID{0009-0008-9093-9420} \and
 Daniel Cantón Enriquez\inst{1}\orcidID{0000-0002-6543-5078}}
 
 \authorrunning{A.~Cant\'u~Olivares et al.}
-\titlerunning{Segmentaci\'on de instancias limita la detecci\'on de \'arboles en ULS denso}
+\titlerunning{Instance Segmentation Limits Tree Detection in Dense ULS Point Clouds}
 
 \institute{Universidad Aut\'onoma de Quer\'etaro (UAQ), Quer\'etaro, M\'exico\\
 \email{dcruz54@alumnos.uaq.mx}}
@@ -39,9 +39,9 @@ Daniel Cantón Enriquez\inst{1}\orcidID{0000-0002-6543-5078}}
 %%  ABSTRACT
 %% ----------------------------------------------------------------
 \begin{abstract}
-La segmentaci\'on autom\'atica de \'arboles individuales (ITS) en nubes de puntos de alta densidad obtenidas mediante escaneo l\'aser UAV (ULS) es cr\'\i{}tica para inventarios forestales escalables; sin embargo, la contribuci\'on relativa del preprocesado sem\'antico y de la segmentaci\'on de instancias al error extremo a extremo del ITS rara vez se a\'\i{}sla experimentalmente. Presentamos una comparaci\'on factorial controlada (dise\~no $3 \times 2$) entre tres estrategias de preprocesado ---sin preprocesado, Random Forest (RF) sobre features geom\'etricas y PointNet++ multiescala (MSG)--- combinadas con dos variantes de un segmentador volum\'etrico Watershed~3D interpretable (seeding cl\'asico por CHM y un nuevo seeding por densidad), calibrado independientemente por flujo y evaluado sobre el benchmark FOR-instance~V1 en cinco tipos de bosque. A pesar de una calidad sem\'antica casi perfecta (tree~IoU~$>$~0.97 para ambos clasificadores), el F1 de instancia alcanza un m\'aximo de 0.209, revelando una fuerte disociaci\'on entre la calidad sem\'antica y el rendimiento a nivel de instancia, donde la principal fuente de error proviene de la separaci\'on de instancias y no del preprocesado sem\'antico. Dentro de las configuraciones evaluadas, RF con features geom\'etricas supera a PointNet++ MSG en todas las combinaciones sin requerir GPU, y el seeding por densidad mejora consistentemente al CHM (+47\% en RF, +74\% en PointNet++), especialmente en canopias densas de altura uniforme donde el CHM es casi plano. Estos hallazgos son espec\'\i{}ficos de condiciones ULS densas, donde la densidad extrema de puntos y la continuidad del dosel amplifican la complejidad geom\'etrica de la separaci\'on de \'arboles individuales.
+Automated individual tree segmentation (ITS) in high-density UAV laser scanning (ULS) point clouds is critical for scalable forest inventories, yet the relative contribution of semantic preprocessing and instance segmentation to end-to-end ITS error is rarely isolated experimentally. We present a controlled factorial comparison ($3 \times 2$ design) of three preprocessing strategies ---no preprocessing, Random Forest (RF) on geometric features, and PointNet++ multi-scale grouping (MSG)--- combined with two variants of an interpretable volumetric Watershed~3D segmenter (classic CHM seeding and a novel density-based seeding), calibrated independently per pipeline and evaluated on the FOR-instance~V1 benchmark across five forest types. Despite near-perfect semantic quality (tree~IoU~$>$~0.97 for both classifiers), instance F1 peaks at 0.209, revealing a strong dissociation between semantic quality and instance-level performance: the dominant source of error emerges from instance separation rather than semantic preprocessing. Within the evaluated configurations, RF with geometric features outperforms PointNet++ MSG across all pipeline combinations without requiring a GPU, and density-based seeding consistently improves over CHM (+47\% for RF, +74\% for PointNet++), particularly in dense uniform-height canopies where the CHM is nearly flat. These findings are specific to dense ULS conditions, where extreme point density and canopy continuity amplify the geometric complexity of individual tree separation.
 
-\keywords{Segmentaci\'on de \'arboles individuales \and Escaneo l\'aser UAV (ULS) \and Segmentaci\'on sem\'antica \and Watershed 3D \and Seeding por densidad \and Random Forest \and PointNet++ \and FOR-instance}
+\keywords{Individual Tree Segmentation \and UAV Laser Scanning (ULS) \and Semantic Segmentation \and Watershed 3D \and Density Seeding \and Random Forest \and PointNet++ \and FOR-instance}
 \end{abstract}
 
 %% ================================================================
