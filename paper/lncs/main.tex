@@ -39,11 +39,10 @@ Daniel Cantón Enriquez\inst{1}\orcidID{0000-0002-6543-5078}}
 %%  ABSTRACT
 %% ----------------------------------------------------------------
 \begin{abstract}
-La segmentaci\'on autom\'atica de \'arboles individuales (ITS) en nubes de puntos de alta densidad obtenidas mediante escaneo l\'aser UAV (ULS) es cr\'\i{}tica para inventarios forestales escalables; sin embargo, la contribuci\'on relativa del preprocesado sem\'antico y de la segmentaci\'on de instancias al error extremo a extremo del ITS rara vez se a\'\i{}sla experimentalmente. Presentamos una comparaci\'on factorial controlada (dise\~no $3 \times 2$) entre tres estrategias de preprocesado ---sin preprocesado, Random Forest (RF) sobre features geom\'etricas y PointNet++ MSG--- combinadas con dos variantes de un segmentador volum\'etrico Watershed~3D interpretable (seeding cl\'asico por CHM y un nuevo seeding por densidad), calibrado independientemente por flujo y evaluado sobre el benchmark FOR-instance~V1 en cinco tipos de bosque. A pesar de una calidad sem\'antica casi perfecta (tree~IoU~$>$~0.97 para ambos clasificadores), el F1 de instancia alcanza un m\'aximo de 0.209, revelando una fuerte disociaci\'on entre la calidad sem\'antica y el rendimiento a nivel de instancia, donde la principal fuente de error proviene de la separaci\'on de instancias y no del preprocesado sem\'antico. Dentro de las configuraciones evaluadas, RF con features geom\'etricas supera a PointNet++ MSG en todas las combinaciones sin requerir GPU, y el seeding por densidad mejora consistentemente al CHM (+47\% en RF, +74\% en PointNet++), especialmente en canopias densas de altura uniforme donde el CHM es casi plano. Estos hallazgos son espec\'\i{}ficos de condiciones ULS densas, donde la densidad extrema de puntos y la continuidad del dosel amplifican la complejidad geom\'etrica de la separaci\'on de \'arboles individuales.
+La segmentaci\'on autom\'atica de \'arboles individuales (ITS) en nubes de puntos de alta densidad obtenidas mediante escaneo l\'aser UAV (ULS) es cr\'\i{}tica para inventarios forestales escalables; sin embargo, la contribuci\'on relativa del preprocesado sem\'antico y de la segmentaci\'on de instancias al error extremo a extremo del ITS rara vez se a\'\i{}sla experimentalmente. Presentamos una comparaci\'on factorial controlada (dise\~no $3 \times 2$) entre tres estrategias de preprocesado ---sin preprocesado, Random Forest (RF) sobre features geom\'etricas y PointNet++ multiescala (MSG)--- combinadas con dos variantes de un segmentador volum\'etrico Watershed~3D interpretable (seeding cl\'asico por CHM y un nuevo seeding por densidad), calibrado independientemente por flujo y evaluado sobre el benchmark FOR-instance~V1 en cinco tipos de bosque. A pesar de una calidad sem\'antica casi perfecta (tree~IoU~$>$~0.97 para ambos clasificadores), el F1 de instancia alcanza un m\'aximo de 0.209, revelando una fuerte disociaci\'on entre la calidad sem\'antica y el rendimiento a nivel de instancia, donde la principal fuente de error proviene de la separaci\'on de instancias y no del preprocesado sem\'antico. Dentro de las configuraciones evaluadas, RF con features geom\'etricas supera a PointNet++ MSG en todas las combinaciones sin requerir GPU, y el seeding por densidad mejora consistentemente al CHM (+47\% en RF, +74\% en PointNet++), especialmente en canopias densas de altura uniforme donde el CHM es casi plano. Estos hallazgos son espec\'\i{}ficos de condiciones ULS densas, donde la densidad extrema de puntos y la continuidad del dosel amplifican la complejidad geom\'etrica de la separaci\'on de \'arboles individuales.
 
 \keywords{Segmentaci\'on de \'arboles individuales \and Escaneo l\'aser UAV (ULS) \and Segmentaci\'on sem\'antica \and Watershed 3D \and Seeding por densidad \and Random Forest \and PointNet++ \and FOR-instance}
 \end{abstract}
-\newpage
 
 %% ================================================================
 %%  1. INTRODUCCI\'ON
@@ -52,7 +51,7 @@ La segmentaci\'on autom\'atica de \'arboles individuales (ITS) en nubes de punto
 
 \subsection{Motivaci\'on}
 
-Los inventarios forestales automatizados a nivel de \'arbol individual son esenciales para la estimaci\'on de carbono almacenado, el monitoreo de la biodiversidad y la silvicultura de precisi\'on. El escaneo l\'aser desde veh\'\i{}culos a\'ereos no tripulados (UAV laser scanning, ULS) proporciona densidades de puntos entre uno y dos \'ordenes de magnitud superiores a las del escaneo l\'aser aerotransportado convencional (airborne laser scanning, ALS) ($\sim$7{,}000~pts/m$^2$ vs.\ $\sim$5~pts/m$^2$), lo que permite caracterizar \'arboles individuales, incluidas sus copas, troncos, ramas y sotobosque. Sin embargo, la segmentaci\'on autom\'atica de \'arboles individuales (ITS) en datos ULS sigue siendo un problema abierto debido al ruido en los modelos de altura, la ambig\"uedad entre copa y sotobosque, y la variabilidad estructural entre tipos de bosque, particularmente en bosques densos donde la alta densidad de puntos y la continuidad vertical hacen que múltiples árboles compartan regiones espaciales continuas.
+Los inventarios forestales automatizados a nivel de \'arbol individual son esenciales para la estimaci\'on de carbono almacenado, el monitoreo de la biodiversidad y la silvicultura de precisi\'on. El escaneo l\'aser desde drones (ULS) proporciona densidades de puntos entre uno y dos \'ordenes de magnitud superiores a las del escaneo l\'aser aerotransportado convencional (ALS) ($\sim$7{,}000~pts/m$^2$ vs.\ $\sim$5~pts/m$^2$), lo que permite caracterizar \'arboles individuales, incluidas sus copas, troncos, ramas y sotobosque. Sin embargo, la segmentaci\'on autom\'atica de \'arboles individuales (ITS) en datos ULS sigue siendo un problema abierto debido al ruido en los modelos de altura, la ambig\"uedad entre copa y sotobosque, y la variabilidad estructural entre tipos de bosque, particularmente en bosques densos donde la alta densidad de puntos y la continuidad vertical hacen que múltiples árboles compartan regiones espaciales continuas.
 
 
 
@@ -141,7 +140,7 @@ Los flujos comparten una arquitectura de dos etapas: (1)~preprocesado sem\'antic
 
 \subsection{Flujo~A --- Sin preprocesado (baseline)}
 
-La nube completa (excluyendo clases $\{0, 3\}$) se pasa directamente al segmentador. Todos los flujos comparten el c\'alculo de la altura sobre el suelo (height above ground, HAG) a partir de un modelo digital de terreno (digital terrain model, DTM) interpolado sobre puntos de suelo, truncada a $[0, 50]$\,m.
+La nube completa (excluyendo clases $\{0, 3\}$) se pasa directamente al segmentador. Todos los flujos comparten el c\'alculo de la altura sobre el suelo (HAG) a partir de un modelo digital de terreno (DTM) interpolado sobre puntos de suelo, truncada a $[0, 50]$\,m.
 
 \subsection{Flujo~B --- Random Forest sobre features geom\'etricas}
 
@@ -149,7 +148,7 @@ Cada punto se representa mediante 27 features geom\'etricas: 8 descriptores eige
 
 \subsection{Flujo~C --- PointNet++ MSG}
 
-Se emplea PointNet++ con agrupamiento multiescala (multi-scale grouping, MSG)~\cite{qi2017} con cuatro m\'odulos Set Abstraction y cuatro Feature Propagation~\cite{yan2019pointnet2pytorch}. La entrada son 5 dimensiones por punto ($XYZ$ + HAG\_norm + intensidad), garantizando equivalencia de informaci\'on con el Flujo~B. La red se entrena durante 100 \'epocas con submuestreos de $8\,192$ puntos. En inferencia se realizan m\'ultiples pasadas con promediado de probabilidades; los puntos residuales se etiquetan por interpolaci\'on KNN ($k=3$).
+Se emplea PointNet++ con agrupamiento multiescala (MSG)~\cite{qi2017} con cuatro m\'odulos Set Abstraction y cuatro Feature Propagation~\cite{yan2019pointnet2pytorch}. La entrada son 5 dimensiones por punto ($XYZ$ + HAG\_norm + intensidad), garantizando equivalencia de informaci\'on con el Flujo~B. La red se entrena durante 100 \'epocas con submuestreos de $8\,192$ puntos. En inferencia se realizan m\'ultiples pasadas con promediado de probabilidades; los puntos residuales se etiquetan por interpolaci\'on KNN ($k=3$).
 
 \subsection{Segmentador de instancias --- Watershed 3D volum\'etrico}\label{sec:watershed}
 
@@ -373,10 +372,10 @@ Esta ventaja se observa dentro de las configuraciones evaluadas y no debe leerse
 El conjunto de test comprende 11~plots y 323~\'arboles GT, con una concentraci\'on significativa en un solo tipo de bosque: NIBIO (boreal con\'\i{}fero) aporta 6 de 11 plots (${\sim}50\%$) y 161 de 323 \'arboles (${\sim}50\%$), mientras que CULS, TUWIEN y RMIT contribuyen un \'unico plot cada uno. Esta distribuci\'on introduce dos efectos cuantificables: (i)~alta varianza en las estimaciones por sitio --- los intervalos de confianza bootstrap al 95\% de F1 para el mejor flujo (D) abarcan $[0.128, 0.314]$, reflejando que sitios individuales como CULS (F1\,=\,0.629) o NIBIO\_5 (F1\,=\,0.000) dominan la dispersi\'on; y (ii)~posible sesgo en las m\'etricas agregadas hacia el comportamiento en bosque boreal denso, que es el escenario m\'as desafiante para todos los m\'etodos.
 
 \paragraph{An\'alisis de errores de segmentaci\'on.}
-El presente trabajo cuantifica el rendimiento del segmentador mediante F1, precisi\'on, recall y coverage, pero no descompone sistem\'aticamente los errores en sobre-segmentaci\'on (un \'arbol GT fragmentado en m\'ultiples predicciones) e infra-segmentaci\'on (m\'ultiples \'arboles GT fusionados en una sola predicci\'on). Si bien las columnas \texttt{over\_seg} y \texttt{under\_seg} se registran en los resultados por plot, un an\'alisis formal de la naturaleza del error --- incluyendo la relaci\'on entre tama\~no de copa, densidad local y tipo de error predominante --- queda fuera del alcance de este estudio y se propone como trabajo futuro.
+Aunque cuantificamos F1, precisi\'on, recall y coverage, no descomponemos sistem\'aticamente los errores en sobre/infra-segmentaci\'on; un an\'alisis formal por tipo de bosque queda como trabajo futuro.
 
 \paragraph{Otras limitaciones.}
-PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; una b\'usqueda exhaustiva podr\'\i{}a mejorar su rendimiento. Por esta raz\'on, las comparaciones entre RF y PointNet++ deben interpretarse principalmente como observaciones dentro del pipeline experimental evaluado y no como una comparaci\'on definitiva entre paradigmas cl\'asicos y deep learning para segmentaci\'on forestal. Las conclusiones sobre el cuello de botella son espec\'\i{}ficas al Watershed~3D volum\'etrico; otros segmentadores (TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024}) podr\'\i{}an mostrar una relaci\'on diferente. No obstante, los patrones de error observados --- especialmente la fusi\'on de copas adyacentes en canopias continuas --- sugieren una dificultad geom\'etrica m\'as amplia para la separaci\'on de instancias en ULS denso. Los resultados son espec\'\i{}ficos a datos ULS ($454$--$10\,156$~pts/m$^2$); las conclusiones presentadas deben interpretarse espec\'\i{}ficamente dentro del contexto de nubes ULS densas y no como una caracterizaci\'on universal del comportamiento de pipelines ITS sobre todas las modalidades LiDAR. Asimismo, este trabajo no busca establecer una comparaci\'on cuantitativa exhaustiva frente a arquitecturas estado-del-arte recientes, sino proporcionar una evaluaci\'on factorial interpretable orientada a identificar la distribuci\'on estructural del error dentro del pipeline ITS.
+PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; por ello, la comparaci\'on RF vs.\ PointNet++ debe leerse como observaci\'on interna del pipeline evaluado y no como veredicto entre paradigmas. Las conclusiones sobre el cuello de botella son espec\'\i{}ficas a Watershed~3D volum\'etrico y a datos ULS ($454$--$10\,156$~pts/m$^2$); otros segmentadores (TreeLearn~\cite{henrich2024}, SegmentAnyTree~\cite{wielgosz2024}) o adquisiciones ALS podr\'\i{}an mostrar una relaci\'on distinta entre error sem\'antico e instancia.
 
 %% ================================================================
 %%  8. CONCLUSIONES
@@ -385,9 +384,7 @@ PointNet++ se eval\'ua con una \'unica configuraci\'on de hiperpar\'ametros; una
 
 Mediante un dise\~no factorial $3 \times 2$ sobre FOR-instance~V1, demostramos que: (1)~el segmentador de instancias, no el preprocesado sem\'antico, es el cuello de botella principal del pipeline ITS; (2)~Random Forest con features geom\'etricas supera significativamente a PointNet++ MSG en todas las combinaciones evaluadas ($p=0.016$, test de permutaci\'on exacto), sin requerir GPU; y (3)~el seeding por densidad de copa mejora consistentemente al seeding CHM (+47\% para RF, +74\% para PointNet++), con significancia marginal ($p=0.096$ y $p=0.066$, respectivamente) limitada por el tama\~no muestral del benchmark ($n=11$ plots), siendo especialmente efectivo en bosques densos de altura uniforme.
 
-La combinación RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test), estableciendo una línea base robusta y eficiente. La brecha entre calidad semántica y calidad de instancia sugiere que las mejoras más impactantes en ITS vendrán de segmentadores capaces de separar copas adyacentes en canopias densas mediante priors geométricos, arquitecturas end-to-end o estrategias de seeding más adaptativas.
-
-Más que proponer un método competitivo, este trabajo aporta una disección experimental interpretable del pipeline ITS bajo ULS denso. Trabajo futuro: comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, seeding adaptativo CHM/densidad según variabilidad local de altura, y análisis formal de sobre- vs.\ infra-segmentación por tipo de bosque.
+La combinación RF + Watershed~3D Density alcanza el mejor F1 de instancia (0.209 en test). La brecha entre calidad semántica y de instancia sugiere que los avances más impactantes en ITS vendrán de segmentadores capaces de separar copas adyacentes en canopias densas mediante priors geométricos, arquitecturas end-to-end o seeding adaptativo. Trabajo futuro: comparación con TreeLearn~\cite{henrich2024} y SegmentAnyTree~\cite{wielgosz2024}, extensión a FOR-instanceV2~\cite{xiang2025}, y análisis formal de sobre/infra-segmentación.
 %% ================================================================
 %%  REFERENCIAS
 %% ================================================================
@@ -396,8 +393,7 @@ Más que proponer un método competitivo, este trabajo aporta una disección exp
 \bibitem{puliti2023}
 Puliti, S., et al.:
 FOR-instance: a UAV laser scanning benchmark dataset for semantic and instance segmentation of individual trees.
-arXiv preprint arXiv:2309.01279 (2023).
-DOI: 10.5281/zenodo.8287792
+arXiv:2309.01279 (2023)
 
 \bibitem{qi2017}
 Qi, C.R., Yi, L., Su, H., Guibas, L.J.:
@@ -411,8 +407,8 @@ In: IEEE Conference on Computer Vision and Pattern Recognition (CVPR), pp.~652--
 
 \bibitem{yan2019pointnet2pytorch}
 Yan, X.:
-\texttt{Pointnet\_Pointnet2\_pytorch}: PyTorch implementation of PointNet and PointNet++.
-GitHub repository, \url{https://github.com/yanx27/Pointnet_Pointnet2_pytorch} (2019). Accedido 2026-04
+Pointnet\_Pointnet2\_pytorch: PyTorch implementation of PointNet and PointNet++.
+\url{https://github.com/yanx27/Pointnet_Pointnet2_pytorch} (2019)
 
 \bibitem{breiman2001}
 Breiman, L.:
@@ -420,54 +416,50 @@ Random Forests.
 Machine Learning \textbf{45}(1), 5--32 (2001)
 
 \bibitem{weinstein2021}
-Weinstein, B.G., Marconi, S., Bohlman, S., Zare, A., White, E.:
-A benchmark dataset for canopy crown detection and delineation in co-registered airborne RGB, LiDAR and hyperspectral imagery from the National Ecological Observation Network.
-PLOS Computational Biology \textbf{17}(7), e1009180 (2021).
-DOI: 10.1371/journal.pcbi.1009180
+Weinstein, B.G., et al.:
+A benchmark dataset for canopy crown detection in airborne RGB, LiDAR and hyperspectral imagery (NEON).
+PLOS Comput.\ Biol.\ \textbf{17}(7), e1009180 (2021)
 
 \bibitem{silva2016}
-Silva, C.A., Hudak, A.T., Vierling, L.A., et al.:
-Imputation of individual longleaf pine (\emph{Pinus palustris} Mill.) tree attributes from field and LiDAR data.
-Canadian Journal of Remote Sensing \textbf{42}(5), 554--573 (2016)
+Silva, C.A., et al.:
+Imputation of individual longleaf pine tree attributes from field and LiDAR data.
+Can.\ J.\ Remote Sens.\ \textbf{42}(5), 554--573 (2016)
 
 \bibitem{popescu2002}
-Popescu, S.C., Wynne, R.H., Nelson, R.F.:
-Estimating plot-level tree heights with lidar: local filtering with a canopy-height based variable window size.
-Computers and Electronics in Agriculture \textbf{37}(1--3), 71--95 (2002)
+Popescu, S.C., et al.:
+Estimating plot-level tree heights with lidar via canopy-height-based variable window filtering.
+Comput.\ Electron.\ Agric.\ \textbf{37}(1--3), 71--95 (2002)
 
 \bibitem{dalponte2016}
 Dalponte, M., Coomes, D.A.:
-Tree-centric mapping of forest carbon density from airborne laser scanning and hyperspectral data.
-Methods in Ecology and Evolution \textbf{7}(10), 1236--1245 (2016)
+Tree-centric mapping of forest carbon density from ALS and hyperspectral data.
+Methods Ecol.\ Evol.\ \textbf{7}(10), 1236--1245 (2016)
 
 \bibitem{xiang2025}
 Xiang, B., et al.:
 ForestFormer3D: A unified framework for end-to-end segmentation of forest LiDAR 3D point clouds.
-In: IEEE/CVF International Conference on Computer Vision (ICCV), Honolulu, Hawaii (2025).
-arXiv:2506.16991
+In: ICCV (2025). arXiv:2506.16991
 
 \bibitem{weinmann2015}
-Weinmann, M., Jutzi, B., Hinz, S., Mallet, C.:
+Weinmann, M., et al.:
 Semantic point cloud interpretation based on optimal neighborhoods, relevant features and efficient classifiers.
-ISPRS Journal of Photogrammetry and Remote Sensing \textbf{105}, 286--304 (2015)
+ISPRS J.\ Photogramm.\ Remote Sens.\ \textbf{105}, 286--304 (2015)
 
 \bibitem{weinmann2017}
-Weinmann, M., Jutzi, B., Mallet, C., Weinmann, M.:
+Weinmann, M., et al.:
 Geometric features and their relevance for 3D point cloud classification.
-ISPRS Annals of the Photogrammetry, Remote Sensing and Spatial Information Sciences \textbf{IV-1/W1}, 157--164 (2017)
+ISPRS Ann.\ Photogramm.\ Remote Sens.\ Spatial Inf.\ Sci.\ \textbf{IV-1/W1}, 157--164 (2017)
 
 
 \bibitem{henrich2024}
 Henrich, J., et al.:
-TreeLearn: A deep learning method for segmenting individual trees from ground-based LiDAR forest point clouds.
-Ecological Informatics \textbf{84}, 102888 (2024).
-DOI: 10.1016/j.ecoinf.2024.102888. arXiv:2309.08471
+TreeLearn: deep learning for individual tree segmentation in ground-based LiDAR.
+Ecol.\ Inform.\ \textbf{84}, 102888 (2024)
 
 \bibitem{wielgosz2024}
-Wielgosz, M., Puliti, S., Xiang, B., Schindler, K., Astrup, R.:
-SegmentAnyTree: A sensor and platform agnostic deep learning model for tree segmentation using laser scanning data.
-Remote Sensing of Environment \textbf{313}, 114367 (2024).
-DOI: 10.1016/j.rse.2024.114367. arXiv:2401.15739
+Wielgosz, M., et al.:
+SegmentAnyTree: Sensor- and platform-agnostic deep learning for tree segmentation.
+Remote Sens.\ Environ.\ \textbf{313}, 114367 (2024)
 
 
 \end{thebibliography}
