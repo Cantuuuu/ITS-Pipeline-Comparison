@@ -1,0 +1,6 @@
+method,f1_with_nibio,f1_without_nibio,delta,pct_change,n_plots_with,n_plots_without
+baseline,0.1119,0.1804,0.0685,61.3,11,5
+rf,0.1419,0.2043,0.0624,44.0,11,5
+pointnet2,0.0823,0.1349,0.0526,63.8,11,5
+rf_density,0.2085,0.2772,0.0687,32.9,11,5
+pointnet2_density,0.1429,0.2005,0.0576,40.3,11,5
